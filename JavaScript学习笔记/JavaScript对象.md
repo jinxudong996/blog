@@ -1,4 +1,4 @@
-#### JavaScript对象
+## JavaScript对象属性及创建
 
 > 对象就是一组属性的无序集合
 
@@ -76,4 +76,105 @@ let { name, age} = person  //解构赋值
 let {name, job} = person //如果没匹配到，就是undefined
 let {name, job='singer'} = person  //设置默认值
 ```
+
+###### 创建对象
+
+- 工厂模式
+
+  ```JavaScript
+  function createPerson(name, age) {
+      let o = new Object()
+      o.name = name
+      o.age = age
+      o.sayHi = function() {
+          console.log('hi')
+      }
+      return o
+  }
+  let person = createPerson('nick', 18)
+  ```
+
+  通过创建一个object实例，并为新实例添加属性和方法，这种工厂模式虽然可以解决创建多个类似对象的问题，但没有解决对象标识问题，即新创建的对象是什么类型。
+
+- 构造函数模式
+
+  ```JavaScript
+  function CreatePerson(name, age) {
+      this.name = name
+      this.age = age
+      this.sayHi = function() {
+          console.log('hi')
+      }
+  }
+  let person = new createPerson('nick', 18)
+  ```
+
+  使用new操作符，调用CreatePerson构造函数来创建实例，需要执行如下五个步骤：
+
+  1. 在内存里创建一个新对象
+  2. 这个新对象内部的Prototype特性被赋值为构造函数的prototype属性
+  3. 构造函数内部的this被赋值为新的实例
+  4. 执行构造函数内部的代码，为新实例添加属性和方法
+  5. 如果构造函数返回非空对象，则返回此对象；否则就返回新实例
+
+  新实例person有一个constructor属性指向构造函数CreatePerson，也可以借此来标识对象，通过instanceof操作符来确定对象类型。
+
+  构造函数模型很好的解决了对象标识问题，但在构造函数内部定义的方法，每次创建新实例都会重新创建一遍。
+
+  ```javascript
+  //CreatePerson里定义的方法
+  this.sayHi = function() {console.log('hi')}
+  this.sayHi = new Function(console.log('hi'))
+  person1.sayHi === person2.sayHi  //false
+  ```
+
+  两种方式在逻辑上是等价的，也就是说在不同的实例上，创建的方法虽然同名却不相等。做着同样的事情，就没有必要定义两个不同的Function实例，这个问题可以通过原型模式来解决。
+
+- 原型模式
+
+  每个函数都会创建一个prototype属性，这个属性称为原型对象，包含着特定引用类型的实例共享的属性和方法。
+
+  ```javascript
+  function CreatePerson(name, age) {
+      this.name = name
+      this.age = age
+  }
+  CreatePerson.prototype.sayHi = function() {
+      console.log('hi')
+  }
+  let p1 = new CreatePerson('nick', 18)
+  let p2 = new CreatePerson('tom', 19)
+  p1.sayHi === p2.sayHi //true
+  CreatePerson.prototype.constructor === CreatePerson //true
+  ```
+
+  自定义构造函数时，原型对象默认只会获得constructor属性，其他所有方法都继承自Object。每次调用构造函数创建一个新实例，该实例内部prototype就会指向构造函数的原型对象。在Firefox、Safari和Chrome浏览器里会为每个对象暴露_proto_属性（JavaScript高级程序设计里这样说的，然而在nodeJs里，实例也有该属性），该属性就指向对象的原型。在其他实现中，对象的原型就被完全隐藏了。
+
+  这里就涉及到了三个对象，实例、构造函数和原型对象。实例与构造函数之间没有直接的联系，实例与原型对象之间通过_proto__ _属性有着直接的联系。
+
+  ```javascript
+  CreatePerson.prototype.isPrototypeOf(p1)  //true
+  Object.getPrototypeOf(p1) == CreatePerson.prototype  //true
+  ```
+
+  原型对象上有个内置的isPrototypeOf方法，可以检查是否是由构造函数创建的实例，和instanceof作用一样。object上的内置的getPrototypeOf方法，可以返回实例的原型对象。
+
+  ###### 对象迭代
+
+  ES7新增了两个静态方法Object.values()和Object.entries()。Object.values()方法用于返回对象值的数组，Object.entries()返回键值对的数组。
+
+  
+
+```JavaScript
+const o = {
+    name:'nick',
+    age: 15
+}
+console.log(Object.values(o)) // ["nick", 15]
+console.log(Object.entries(o))  //["name", "nick"] ["age", 15]
+```
+
+
+
+
 
