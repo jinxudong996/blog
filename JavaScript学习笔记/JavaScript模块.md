@@ -2,29 +2,76 @@
 
 在一个复杂度应用中，将代码按照一定的规则拆分到几个互相独立的文件中，通过对外暴露调用接口，与外部完成整合，每个文件彼此独立，模块之间又能够互相调用和通信，这就是模块化。
 
-在ES6之前，常用的解决方案是通过立即执行函数，构造一个私有作用域，在通过闭包对外暴露接口。比如著名的JQuery就是这样做的：
+在ES6之前，常用的解决方案是通过立即执行函数，构造一个私有作用域，在通过闭包对外暴露接口。
 
 ```javascript
-（function(window,$){
-	var data = 'data'
-	function foo(){
-		console.log('this is foo')
+var foo = (function() {
+//私有Foo模块  return是为了暴露相应的接口
+	return {
+		bar: 'baz',
+		baz: function() {
+			console.log(this.baz)
+		}
 	}
-	
-}）（window,jQuery）
+})()
 ```
 
 
 
-ES6模块功能主要由export和import构成，export用于规定模块的对外接口，import用于带入模块提供的功能。
+比如著名的JQuery是这样做的：
 
+```javascript
+（function(window,undefined){
+	var jQuery = ...
+    window.jQuery = window.$ = jQuery
+}）（window）
 ```
-export const name = "nick"
-import name from "./example.js"
 
-if(name === 'nick'){
-	import name from "./example.js"  //语法错误
+通过创建一个自调用匿名函数，创建一个私有作用域，该作用域中的代码不会和已有的同名函数，变量以及第三方库冲突。最后通过挂载到window对象上将对应的方法暴露出去。
+
+这种手动编写模块在实际开发中不够可靠，假如要添加异步加载和循环依赖就非常困难了，对这样的系统做静态分析也是个问题。
+
+##### 解决方案
+
+> commonJS规范概述了同步声明依赖的模块定义，这个规范主要用于在服务器端实现模块化代码组织，但也可用于定义在浏览器中使用的模块依赖，然而CommonJS模块语法不能直接在浏览器中直接运行，如果想在浏览器中运行CommonJS模块，就需要与其非原生的模块语法之间构建桥梁，常用的解决方案是提前把模块文件打包好，把全局属性转化为原生的JavaScript结构，将模块代码封装在函数闭包中，最终只提供一个文件。为了正确的顺序打包模块，需要事先生成全面的依赖图。
+
+该模块定义需要使用require（）来指定依赖，使用exports对象定义公共API。
+
+```javascript
+var modules = require('./modules')
+module.exports = {
+    modules
 }
 ```
 
+equire()加载模块永远是单例，不管请求多少次，相应的模块只会加载一次，第一次下载模块就会被缓存，后续加载的只是模块的缓存。
+
+> CommonJS以服务端为目标环境，能够一次把所有的模块加载到内存，而异步模块定义（AMD）的模块系统则是以浏览器为目标执行环境。AMD模块实现的核心就是用函数包装模块定义，并允许加载器库控制何时加载模块，包装函数也便于模块代码的移植。
+
+ES6引入了模块规范，简化了之前的模块加载器，原生浏览器支持意味着加载器及其他预处理器都不在必要。模块功能主要由export和import构成，export用于规定模块的对外接口，import用于导入模块提供的功能。
+
+```
+//常规用法
+export const name = 'nick'
+import name from './example.js'
+
+if(name === 'nick'){
+	import name from './example.js'  //语法错误
+}
+
+name = 'tom' //错误
+people.name = 'tom'  //错误
+name.age = '18'  //允许
+//导入对于模块而言是只读的，相当于const生命的变量
+```
+
 export和import命令如果出现在块级作用域中，就会报一个语法错误，因为import语句的执行是在编译阶段，if语句毫无意义，这违背了ES6模块设计的初衷。将ES6设计成静态的，有一个非常明显的优势，通过静态分析能够分析出导入的依赖。如果导入的模块没有被使用，可以通过tree shaking等手段减少代码体积，进而提升运行性能。这就是基于ESM实现tree shaking的基础。
+
+> 静态分析
+>
+> 静态代码分析是指在不实际执行程序的情况下，对代码语义和行为进行分析，由此找出程序中由于错误的编码导致异常的程序语义或未定义的行为。通俗的说，静态代码分析就是在代码编写的同时就能找出代码的编码错误。你不需要等待所有代码编写完毕，也不需要构建运行环境，编写测试用例。它能在软件开发流程早期就发现代码中的各种问题，从而提高开发效率和软件质量
+
+> tree shaking
+>
+> 通常用于描述移除JavaScript上下文中的未引用代码行为的术语。依赖于import和export语句，用来检测代码模块是否被导入导出，且被JavaScript文件使用。
+
