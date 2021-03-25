@@ -4,4 +4,4 @@
 
 ###### 2021
 
-[JavaScript模块](https://github.com/jinxudong996/blog/blob/main/JavaScript%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/JavaScript%E6%A8%A1%E5%9D%97.md)
+[3.24   JavaScript对象属性及对象创建](https://github.com/jinxudong996/blog/blob/main/JavaScript%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/JavaScript%E5%AF%B9%E8%B1%A1.md)
