@@ -9,3 +9,5 @@
 [3.25 JavaScript继承](https://github.com/jinxudong996/blog/blob/main/JavaScript%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/JavaScript%E7%BB%A7%E6%89%BF.md)
 
 [3.27 JavaScript类](https://github.com/jinxudong996/blog/blob/main/JavaScript%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/JavaScript%E7%B1%BB.md)
+
+a
