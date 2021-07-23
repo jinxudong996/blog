@@ -15,4 +15,12 @@ community
 Standard
 defines
 twelfth
+edition 
+widely 
+programming 
+embedded 
+browsers 
+adopted 
+several 
+subsequent 
 
