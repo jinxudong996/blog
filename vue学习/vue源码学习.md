@@ -441,9 +441,9 @@ vue源码学习
   }
   ```
 
-  createElement函数主要还是执行了 _createElement 方法，它的工作就是对参数进行了一些处理，随后调用真正创建 VNode 的函数 _createElement
+  createElement函数主要还是执行了 _createElement 方法，它的工作就是对参数进行了一些处理，他可以不传data，当不传data时，依次传入的children、normalizationType就会往前移动一个位置。随后调用真正创建 VNode 的函数 _createElement
 
-  ```javascript
+  ```
   export function _createElement (
     context: Component,
     tag?: string | Class<Component> | Function | Object,
@@ -529,6 +529,22 @@ vue源码学习
     }
   }
   ```
+
+  这个函数先对data进行了校验，通过
+
+  ```javascript
+  isDef(data) && isDef((data: any).__ob__)
+  ```
+
+  来判断data不能是响应式的，随后又校验了其他的一些is属性、key属性等，如果校验通过就会使用createEmptyVNode函数创建一个注释节点。接下来就是处理children地方了，首先根据 normalizationType 类型的不同来执行 normalizeChildren(children) 和 simpleNormalizeChildren(children) ，normalizationType 是表示子节点规范的类型，主要是参考render函数是编译生成的还是手写的。
+
+  normalizeChildren(children)函数主要是将数组转化为一维数组，simpleNormalizeChildren(children)这里真的有点不太懂，后面好好的看一下。
+
+   vm._render 创建了一个VNode，接下来要通过 vm._update 渲染成真实的dom。 Vue 的 _update 是实例的一个私有方法，它被调用的时机有 2 个，一个是首次渲染，一个是数据更新的时，定义在src/core/instance/lifecycle.js 。
+
+  看不懂。。。。先看下组件化
+
+- 组件化
 
   
 
