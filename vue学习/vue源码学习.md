@@ -230,7 +230,7 @@ vue源码学习
 
   这里把原型上的$mount方法保存到了一个变量mount里，接下来重写了原型上的$mount方法。
 
-  在重写的$mount方法里先对el进行校验，vue不能够挂载在html和doby这样的根节点上面，紧接着又判断了如果实例化vue的参数里有render函数，就直接调用原先原型上的$mount方法渲染dom，如果没有render函数，就将el或者template字符串通过compileToFunctions方法转化为render方法。
+  在重写的$mount方法里先对el进行校验，vue不能够挂载在html和body这样的根节点上面，紧接着又判断了如果实例化vue的参数里有render函数，就直接调用原先原型上的$mount方法渲染dom，如果没有render函数，就将el或者template字符串通过compileToFunctions方法转化为render方法。
 
   原先原型上的$mount方法定义在`src/platforms/web/runtime/index.js`里的，
 

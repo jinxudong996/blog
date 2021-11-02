@@ -50,7 +50,7 @@ equire()加载模块永远是单例，不管请求多少次，相应的模块只
 
 ES6引入了模块规范，简化了之前的模块加载器，原生浏览器支持意味着加载器及其他预处理器都不在必要。模块功能主要由export和import构成，export用于规定模块的对外接口，import用于导入模块提供的功能。
 
-```
+```javascript
 //常规用法
 export const name = 'nick'
 import name from './example.js'
