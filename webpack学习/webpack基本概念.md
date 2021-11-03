@@ -104,7 +104,153 @@ const module1 = {
 
 这样module里的数据并不安全，因为当时还没有块级作用域的概念，任何人都可以通过`module1.foo1='dar'`来更改module1的内部状态。闭包的运用就出现了，通过立即执行函数，构造一个私有作用域，再通过闭包向外部暴露对应的接口。著名的jquery就是通过闭包将对外接口挂载到window上
 
+
+
+先学习4.0
+
+将js转译为低版本，需要用到babel-loader。首先安装babel-loader及其依赖：
+
+```javascript
+npm install babel-loader -D
+npm install @babel/core @babel/preset-env @babel/plugin-transform-runtime -D
+npm install @babel/runtime @babel/runtime-corejs3
 ```
 
+在src目录下新建index.js文件，写上ES6语法  let name="nick"
+
+新建webpack.config.js如下：
+
+```javascript
+module.exports = {
+  mode: 'development',
+  module: {
+    rules: [
+      {
+        test: /\.jsx?$/,
+        use: {
+          loader: 'babel-loader',
+          options: {
+            presets: ["@babel/preset-env"],
+            plugins: [
+              [
+                "@babel/plugin-transform-runtime",
+                {
+                    "corejs": 3
+                }
+              ]
+            ]
+          }
+        },
+        exclude: /node_modules/
+      }
+    ]
+  }
+}
+```
+
+运行npx webpack，就可以看到多了个dist目录及dist目录下的main.js
+
+```javascript
+(function(module, exports) {
+
+eval("var name = 'nick';\n\n//# sourceURL=webpack:///./src/index.js?");
+
+/***/ })
+```
+
+ES6已经被转译成了ES5语法。
+
+
+
+在浏览器中查看页面
+
+指定打包文件回带有hash值，就会导致每次生成的js文件名不一样，导入js就会有很麻烦，可以通过插件html-webpack-plugin插件来完成。新建public文件及index.html文件。
+
+安装插件
+
+```
+npm install html-webpack-plugin -D 
+```
+
+在webpack.config.js中添加
+
+```javascript
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+
+plugins: [
+    //数组 放着所有的webpack插件
+    new HtmlWebpackPlugin({
+      template: './public/index.html',
+      filename: 'index.html', //打包后的文件名
+      minify: {
+          removeAttributeQuotes: false, //是否删除属性的双引号
+          collapseWhitespace: false, //是否折叠空白
+      },
+      // hash: true //是否加上hash，默认是 false
+    })
+  ]
+```
+
+运行npx webpack，此时就会看到dist目录下生成了main.js和index.html，在index.html中就可以看到main.js已经被引入html文件里
+
+```html
+<script type="text/javascript" src="main.js"></script></body>
+```
+
+这个插件很是强大的，不仅仅会引入js，还可以通过配置来生成指定的html。
+
+在public文件下新建config.js
+
+```javascript
+module.exports = {
+    dog: {
+        template: {
+            hair: 'red',
+            name:'jack'
+        }
+    },
+    cat: {
+        template: {
+            hair: 'black',
+            name:'Jerry'
+        }
+    }
+}
+```
+
+在webpack.config.js中添加：
+
+```
+const isDev = process.env.NODE_ENV === 'development';
+const config = require('./public/config')[isDev ? 'dog' : 'cat'];
+
+plugins: [
+    new HtmlWebpackPlugin({
+      template: './public/index.html',
+      filename: 'index.html', //打包后的文件名
+      config: config.template
+    })
+  ]
+```
+
+同时也在public/index.html文件中将title标签改为：
+
+```html
+<title><%= (htmlWebpackPlugin.options.config.name) %></title>
+```
+
+随后更改下打包命令，在package.json中添加：
+
+```javascript
+"scripts": {
+    "dev": "cross-env NODE_ENV=development webpack",
+    "build": "cross-env NODE_ENV=production webpack"
+  },
+```
+
+运行 npm run dev  ,可以看到打包后的index.html中的title标签：
+
+```html
+<title>jack</title>
 ```
 
