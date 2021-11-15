@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>节流与防抖</title>
+	<meta charset="utf-8">
+	<style>
+	    #container{
+	        width: 100%; height: 200px; line-height: 200px; text-align: center; color: #fff; background-color: #444; font-size: 30px;
+	    }
+    </style>
+</head>
+<body>
+ <div id="container"></div>
+ <script type="text/javascript">
+	var count = 1;
+	var container = document.getElementById('container');
+
+	function getUserAction() {
+	    container.innerHTML = count++;
+	    console.log(1111,this)
+
+	};
+
+	// container.onmousemove = getUserAction;
+	container.onmousemove = debounce(getUserAction, 1000);
+
+	// function debounce(func, wait) {
+	//     var timeout;
+	//     return function () {
+	//         clearTimeout(timeout)
+	//         timeout = setTimeout(func, wait);
+	//     }
+	// }
+	// function debounce(func, wait) {
+	//     var timeout;
+	//     return function () {
+	//         var context = this;
+	//         clearTimeout(timeout)
+	//         timeout = setTimeout(function(){
+	//             func.apply(context)
+	//         }, wait);
+	//     }
+	// }
+	function debounce(func, wait) {
+	    var timeout;
+
+	    return function () {
+	        var context = this;
+	        var args = arguments;
+
+	        clearTimeout(timeout)
+	        timeout = setTimeout(function(){
+	            func.apply(context, args)
+	        }, wait);
+	    }
+	}
+</script>
+</body>
+</html>
