@@ -133,8 +133,6 @@ position一共有五个值：
 
 #### flex布局
 
-
-
 [阮一峰大佬文章链接]: https://www.ruanyifeng.com/blog/2015/07/flex-grammar.html
 
 >  Flexible Box 模型，通常被称为 flexbox，是一种一维的布局模型。它给 flexbox 的子元素之间提供了强大的空间分布和对齐能力 
@@ -250,3 +248,82 @@ flex容器默认存在两根轴，水平的主轴和垂直的交叉轴。
 - align-self
 
    `align-self`属性允许单个项目有与其他项目不一样的对齐方式，可覆盖`align-items`属性。默认值为`auto`，表示继承父元素的`align-items`属性，如果没有父元素，则等同于`stretch`。 
+
+#### 实现元素固定宽高比
+
+如果元素尺寸已知，就比较简单了，直接根据比例计算就行了，如果元素未知的话，也可以通过JavaScript动态计算。实际上通过css也可以同样达到这个效果。
+
+- 可替换元素
+
+  > 在 [CSS](https://developer.mozilla.org/zh-CN/docs/Web/CSS) 中，**可替换元素**（**replaced element**）的展现效果不是由 CSS 来控制的。这些元素是一种外部对象，它们外观的渲染，是独立于 CSS 的。
+  >
+  > 简单来说，它们的内容不受当前文档的样式的影响。CSS 可以影响可替换元素的位置，但不会影响到可替换元素自身的内容。某些可替换元素，例如 [``](https://developer.mozilla.org/zh-CN/docs/Web/HTML/Element/iframe) 元素，可能具有自己的样式表，但它们不会继承父文档的样式。
+  >
+  > CSS 能对可替换元素产生的唯一影响在于，部分属性支持控制元素内容在其框中的位置或定位方式。
+
+  可替换元素（<img>、<video>）本身具有像素宽度和高度的概念，可以指定其宽度和高度，另一边自动计算就可以实现固定宽高比。
+
+  ```html
+  <!DOCTYPE html>
+  <html>
+  <head>
+  	<title>position</title>
+  	<meta charset="utf-8">
+  	<style type="text/css">
+  		.img-wrapper {
+  		  width: 50vw;
+  		  margin: 100px auto;
+  		  padding: 10px;
+  		  border: 5px solid lightsalmon;
+  		  font-size: 0;
+  		}
+  
+  		img {
+  		  width: 100%;
+  		  height: auto;
+  		}
+  	</style>
+  </head>
+  <body>
+  <div class="img-wrapper">
+    <img src="https://p3.ssl.qhimg.com/t01f7d210920c0c73bd.jpg" alt="">
+  </div>
+  </body>
+  </html>
+  ```
+
+  
+
+- 一般元素
+
+  垂直方向上的内外编剧使用百分比做单位时，是基于包含块的宽度来计算的。通过padding-bottom实现普通元素的固定宽高比
+
+  ```html
+  <!DOCTYPE html>
+  <html>
+  <head>
+  	<title>position</title>
+  	<meta charset="utf-8">
+  	<style type="text/css">
+  		.wrapper {
+  		  width: 40vw;
+  		}
+  		.intrinsic-aspect-ratio-container {
+  		  width: 100%;
+  		  height: 0;
+  		  padding: 0;
+  		  padding-bottom: 50%;
+  		  margin: 50px;
+  		  background-color: lightsalmon;
+  		}
+  	</style>
+  </head>
+  <body>
+  <div class="wrapper">
+    <div class="intrinsic-aspect-ratio-container"></div>
+  </div>
+  </body>
+  </html>
+  ```
+
+  
