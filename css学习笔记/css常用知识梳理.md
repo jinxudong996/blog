@@ -131,11 +131,11 @@ position一共有五个值：
 - absolute 绝对定位，对象脱离标准文档流，使用top, right, bottom, left 等属性进行绝对定位（相对于static定位以外的第一个父元素进行绝对定位） 同时可通过z-index定义层叠关系 
 - fixed 固定定位，对象脱离标准文档流，使用top, right, bottom, left 等属性进行绝对定位（相对于浏览器窗口进行绝对定位）同时可通过z-index定义层叠关系。
 
-#### flex布局
-
-[阮一峰大佬文章链接]: https://www.ruanyifeng.com/blog/2015/07/flex-grammar.html
+#### flex布局 
 
 >  Flexible Box 模型，通常被称为 flexbox，是一种一维的布局模型。它给 flexbox 的子元素之间提供了强大的空间分布和对齐能力 
+>
+>  [阮一峰大佬文章链接]: https://www.ruanyifeng.com/blog/2015/07/flex-grammar.html
 
 flex容器默认存在两根轴，水平的主轴和垂直的交叉轴。
 

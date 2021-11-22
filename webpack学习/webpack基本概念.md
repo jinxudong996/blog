@@ -106,6 +106,10 @@ const module1 = {
 
 
 
+
+
+
+
 先学习4.0
 
 将js转译为低版本，需要用到babel-loader。首先安装babel-loader及其依赖：
@@ -248,9 +252,121 @@ plugins: [
   },
 ```
 
-运行 npm run dev  ,可以看到打包后的index.html中的title标签：
+运行 npm run dev  ,可以看到打包后的index.html中的title标签会跟着输入的命令变化。
 
 ```html
 <title>jack</title>
+```
+
+在浏览器中显示
+
+在webpack.config.js中添加webpack-dev-server配置：
+
+```javascript
+devServer: {
+    port: '3000', //默认是8080
+    quiet: false, //默认不启用
+    inline: true, //默认开启 inline 模式，如果设置为false,开启 iframe 模式
+    stats: "errors-only", //终端仅打印 error
+    overlay: false, //默认不启用
+    clientLogLevel: "silent", //日志等级
+    compress: true //是否启用 gzip 压缩
+  }
+```
+
+再更改下package.json中的script：
+
+```
+"scripts": {
+    "dev": "cross-env NODE_ENV=development webpack-dev-server",
+    "build": "cross-env NODE_ENV=production webpack"
+  },
+```
+
+在命令行运行`npm run dev`，在浏览器中输入`localhost:30000`，即可看到public里的index.html内容。目前的代码都是经过编译后的，不容易调试，可以设置`devtool`将编译后的代码映射回源代码。
+
+处理样式文件：
+
+webpack不能直接处理css，需要借助loader。在webpack.config.js中的rules中添加：
+
+```javascript
+{
+      test: /\.(le|c)ss$/,
+      use: ['style-loader', 'css-loader', {
+          loader: 'postcss-loader',
+          options: {
+              plugins: function () {
+                  return [
+                      require('autoprefixer')()
+                  ]
+              }
+          }
+        }, 'less-loader'],
+        exclude: /node_modules/
+    }
+```
+
+在src下面新建文件index.css:
+
+```css
+.color{
+    color:red;
+}
+```
+
+同时在index.js中引入 `import './index.less'`，运行`npm run dev`，即可看见页面颜色更改。
+
+
+
+图片处理
+
+使用url-loader进行处理，在rules中配置：
+
+```
+{
+        test: /\.(png|jpg|gif|jpeg|webp|svg|eot|ttf|woff|woff2)$/,
+        use: [
+            {
+                loader: 'url-loader',
+                options: {
+                    limit: 10240, //10K
+                    esModule: false
+                }
+            }
+        ],
+        exclude: /node_modules/
+    }
+```
+
+在index.css中引入图片：
+
+```
+.img{
+    width:100px;
+    height: 100px;
+    border:1px solid red;
+    background:url('../pka.png') 100% 100%;
+}
+```
+
+在index.html中即可查看。
+
+
+
+处理html中图片：
+
+配置loader：
+
+```
+{
+   test: /.html$/,
+   use: 'html-withimg-loader'
+},
+```
+
+在index.html中引入图片：
+
+```
+<img src="../pka.png" alt="">
 ```
 
