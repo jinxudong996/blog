@@ -1,0 +1,9 @@
+.color{
+    color:red;
+}
+.img{
+    width:100vh;
+    height: 100px;
+    border:1px solid red;
+    background:url('../pka.png') 100% 100%;
+}
