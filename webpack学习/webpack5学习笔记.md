@@ -405,7 +405,7 @@ const webpack = require('webpack');
 new webpack.HotModuleReplacementPlugin(), //热更新插件
 ```
 
-
+[代码地址](https://github.com/jinxudong996/blog/tree/main/webpack%E5%AD%A6%E4%B9%A0/code/webpack5.0)
 
 
 
