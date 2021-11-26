@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>indexDB</title>
+	<meta charset="utf-8">
+</head>
+<body>
+<script type="text/javascript">
+	
+	let db,
+	 	request,
+	  	version = 12311;
+	let users = {
+	 	username: "007",
+	 	firstName: "James",
+	 	lastName: "Bond",
+	 	password: "foo"
+	};
+	request = indexedDB.open("admin", version);
+	request.onerror = (event) =>
+	 	console.log(`Failed to open: ${event.target.errorCode}`);
+	request.onsuccess = (event) => {
+		db = event.target.result;
+		console.log(db)
+		const transaction = db.transaction("users","readwrite"),
+		store = transaction.objectStore("users"),
+		requestDB = store.get("007");
+		requestDB.onerror = (event) => alert("Did not get the object!");
+		requestDB.onsuccess = (event) => console.log(event);
+		let users = [{name:'nick',age:'18'},{name:'tom',age:'19'}]
+		for (let user of users) {
+		 	store.add(user);
+		} 
+	}; 
+	request.onupgradeneeded = (event) => {
+	    const db = event.target.result;
+	    // 如果存在则删除当前 objectStore。测试的时候可以这样做
+	    // 但这样会在每次执行事件处理程序时删除已有数据
+	    if (db.objectStoreNames.contains("users")) {
+	 		db.deleteObjectStore("users");
+		}
+		db.createObjectStore("users", { keyPath: "username" });
+		console.log(db)
+	};  
+
+</script>
+</body>
+</html>
