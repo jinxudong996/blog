@@ -136,6 +136,48 @@ eval("const sayHello = __webpack_require__(/*! ./hello */ \"./src/hello.js\")\r\
 
 webpack将文件转化为AST的目的就是方便开发者提取模块文件中的关键信息，这样一来，我们就可以知晓开发者到底写了什么东西，也就可以根据这些写出来的进行分析和扩展。
 
+可以在`https://esprima.org/demo/parse.html#`这个网站上将代码解析成AST树。
+
+```javascript
+var answer = 6 * 7;
+```
+
+```javascript
+{
+  "type": "Program",
+  "body": [
+    {
+      "type": "VariableDeclaration",
+      "declarations": [
+        {
+          "type": "VariableDeclarator",
+          "id": {
+            "type": "Identifier",
+            "name": "answer"
+          },
+          "init": {
+            "type": "BinaryExpression",
+            "operator": "*",
+            "left": {
+              "type": "Literal",
+              "value": 6,
+              "raw": "6"
+            },
+            "right": {
+              "type": "Literal",
+              "value": 7,
+              "raw": "7"
+            }
+          }
+        }
+      ],
+      "kind": "var"
+    }
+  ],
+  "sourceType": "script"
+}
+```
+
 
 
 ##### compiler和compilation
@@ -152,6 +194,181 @@ compiler对象和compilation对象都继承自tapable库，该库暴露了所有
 
 
 ##### 手写一个简易的webpack
+
+###### 项目初始化
+
+```
+mkdir wpk
+npm init -y
+```
+
+创建文件`src/index.js`和`src/greeting.js`为我们的即将打包的业务代码。
+
+创建文件`lib/compiler.js`复测编译，构建module输出文件， `lib/index.js` 实例化Compiler类，将配置参数传入 ，`lib/parser.js`   负责解析功能。
+
+创建配置文件`wpk.config.js`
+
+```javascript
+const path = require("path");
+global.filename = path.join(__dirname,'./src')
+module.exports = {
+  entry: path.join(__dirname, "./src/index.js"),
+  output: {
+    path: path.join(__dirname, "./dist"),
+    filename: "bundle.js",
+  },
+};
+```
+
+这里定义了入口和出口
+
+同时我们的业务代码
+
+`src/index.js`
+
+```
+import { greeting } from "./greeting.js";
+
+document.write(greeting("天王盖地虎"));
+```
+
+`src/greeting.js`
+
+```
+export function greeting(name) {
+  return "口令：" + name;
+}
+```
+
+这个项目的所需要的依赖
+
+`package.json`
+
+```
+"dependencies": {
+    "@babel/preset-env": "^7.15.6",
+    "babel-core": "^6.26.3",
+    "babel-preset-env": "^1.7.0",
+    "babel-traverse": "^6.26.0",
+    "babylon": "^6.18.0"
+  }
+```
+
+以及`.babelrc`
+
+```
+{
+    "presets": [
+        "@babel/preset-env"
+    ]
+}
+```
+
+###### 解析
+
+项目初始化完成，首先完成`parse.js`的编写。
+
+```javascript
+const fs = require("fs");
+const babylon = require("babylon");
+
+module.exports = {
+
+  getAST: (path) => {
+    const source = fs.readFileSync(path, "utf-8");
+
+    return babylon.parse(source,{
+        sourceType:'module'
+    })
+  },
+  
+};
+```
+
+使用`babylon`，将文件解析成AST树。
+
+>   Babylon 是 [Babel](https://github.com/babel/babel) 中使用的 JavaScript 解析器。  
+>
+> Babylon 根据 [Babel AST 的格式](https://github.com/babel/babylon/blob/master/ast/spec.md) 生成 AST 。它基于 [ESTree 规范](https://github.com/estree/estree)，具有以下差别（现在可以使用 `estree` 插件来取消掉这些差别）：
+>
+> - [文字](https://github.com/estree/estree/blob/master/es5.md#literal)符号会被替换为[字符串](https://github.com/babel/babylon/blob/master/ast/spec.md#stringliteral)，[数字](https://github.com/babel/babylon/blob/master/ast/spec.md#numericliteral)，[布尔](https://github.com/babel/babylon/blob/master/ast/spec.md#booleanliteral)，[Null](https://github.com/babel/babylon/blob/master/ast/spec.md#nullliteral)，[正则表达式](https://github.com/babel/babylon/blob/master/ast/spec.md#regexpliteral)
+> - [属性](https://github.com/estree/estree/blob/master/es5.md#property)符号会被替换为 [ObjectProperty](https://github.com/babel/babylon/blob/master/ast/spec.md#objectproperty) 和 [ObjectMethod](https://github.com/babel/babylon/blob/master/ast/spec.md#objectmethod)
+> - [方法定义](https://github.com/estree/estree/blob/master/es2015.md#methoddefinition)会被替换为[类方法](https://github.com/babel/babylon/blob/master/ast/spec.md#classmethod)
+> - [指令](https://github.com/babel/babylon/blob/master/ast/spec.md#programs)和[语法块](https://github.com/babel/babylon/blob/master/ast/spec.md#blockstatement)的 `directives` 字段中包含额外的[指令](https://github.com/babel/babylon/blob/master/ast/spec.md#directive)和[指令字符集](https://github.com/babel/babylon/blob/master/ast/spec.md#directiveliteral)
+> - [函数表达式](https://github.com/babel/babylon/blob/master/ast/spec.md#functionexpression)中的[类方法](https://github.com/babel/babylon/blob/master/ast/spec.md#classmethod)，[对象属性](https://github.com/babel/babylon/blob/master/ast/spec.md#objectproperty)和[对象方法](https://github.com/babel/babylon/blob/master/ast/spec.md#objectmethod)值属性的属性被强制/带入主方法节点。
+
+新建测试文件，`src/test.js`
+
+```
+const path = require("path");
+const { getAST} = require('./parser');
+
+let ast = getAST(path.join(__dirname,'../src/index.js'))
+console.log(ast)
+```
+
+在命令行即可看见生成的AST，有了生成的AST，可以使用`babel-traverse`解析出文件所有的依赖
+
+```javascript
+getDependencies: (ast) => {
+    const dependencies = [];
+    traverse(ast, {
+      ImportDeclaration: ({ node }) => {
+        dependencies.push(node.source.value);
+      },
+    });
+    return dependencies;
+  },
+```
+
+接下来将ES6代码转化为ES5
+
+```
+transform: (ast) => {
+    const { code } = transformFromAst(ast, null, {
+      presets: ["env"],
+    });
+    return code;
+  },
+```
+
+`parser.js`中主要就三个方法：
+
+- `getAST`： 将获取到的模块内容 解析成`AST`语法树
+- `getDependencies`：遍历`AST`，将用到的依赖收集起来
+- `transform`：把获得的`ES6`的`AST`转化成`ES5`
+
+###### 编译
+
+接下来开始编写`compiler.js`，创建`Compiler `类，完成以下功能
+
+- 接收`wpk.config.js`配置参数，并初始化`entry`、`output`
+- 开启编译`run`方法。处理构建模块、收集依赖、输出文件等。
+- `buildModule`方法。主要用于构建模块（被`run`方法调用）
+- `emitFiles`方法。输出文件（同样被`run`方法调用）
+
+```javascript
+const path = require("path");
+const fs = require("fs");
+
+module.exports = class Compiler {
+  constructor(options) {
+    const { entry, output } = options;
+    this.entry = entry;
+    this.output = output;
+    this.modules = [];
+  }
+  // 开启编译
+  run() {}
+  // 构建模块相关
+  buildModule(filename, isEntry) {
+    // filename: 文件名称
+    // isEntry: 是否是入口文件
+  }
+  // 输出文件
+  emitFiles() {}
+};
+```
 
 
 
