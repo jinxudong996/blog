@@ -370,9 +370,123 @@ module.exports = class Compiler {
 };
 ```
 
+因为我们的入口文件是讲配置文件当做参数传入的，`new Compiler(options).run();`，在构造函数中就初始化`entry`、`output`和`modules`。
 
+开始构建模块
 
+```javascript
+ run() {
+    const entryModule = this.buildModule(this.entry, true);
+    console.log(entryModule)
+    this.modules.push(entryModule);
+    this.modules.map((_module) => {
+      _module.dependencies.map((dependency) => {
+        this.modules.push(this.buildModule(dependency));
+      });
+    });
+    console.log(this.modules);
+  }
 
+  buildModule(filename, isEntry) {
+    let ast;
+    if (isEntry) {
+      ast = getAST(filename);
+    } else {
+      // const absolutePath = path.join(process.cwd(), './src',filename);
+      const absolutePath = path.join(global.filename, filename);
+      ast = getAST(absolutePath);
+    }
+
+    return {
+      filename, // 文件名称
+      dependencies: getDependencies(ast), // 依赖列表
+      transformCode: transform(ast), // 转化后的代码
+    };
+  }
+```
+
+`buildModule`函数根据传入的文件名称，将文件解析成AST，返回构建的module，module实际上就是一个包含文件名、依赖列表和转化后的代码的对象。
+
+在`run`函数中，将配置文件中定义的入口文件路径传入`buildModule`,随后将入口文件构建的module存入`modules`，开始递归遍历入口文件中所有的依赖，并将其构建成module。
+
+有了所有的modules列表，将这些列表输出成一个文件。遍历modules列表，将所有的module转化成一个以文件名为名字的匿名函数，随后传入一个IIFE，这个IIFE完全仿照`webpack4`的输出文件
+
+```javascript
+emitFiles() {
+    const outputPath = path.join(this.output.path, this.output.filename);
+    let modules = "";
+    this.modules.map((_module) => {
+      modules += `'${_module.filename}' : function(require, module, exports) {${_module.transformCode}},`;
+    });
+
+    const bundle = `
+      (function(modules) {
+        function require(fileName) {
+          const fn = modules[fileName];
+          const module = { exports:{}};
+          fn(require, module, module.exports)
+          return module.exports
+        }
+        require('${this.entry}')
+      })({${modules}})
+    `;
+    // console.log(bundle)
+    fs.writeFileSync(outputPath, bundle, "utf-8");
+  }
+```
+
+`webpack4`输出的IIFE
+
+```
+(function(modules) {
+  // 已经加载过的模块
+  var installedModules = {};
+
+  // 模块加载函数
+  function __webpack_require__(moduleId) {
+    if(installedModules[moduleId]) {
+      return installedModules[moduleId].exports;
+    }
+    var module = installedModules[moduleId] = {
+      i: moduleId,
+      l: false,
+      exports: {}
+    };
+    modules[moduleId].call(module.exports, module, module.exports, __webpack_require__);
+    module.l = true;
+    return module.exports;
+  }
+  __webpack_require__(0);
+})([
+/* 0 module */
+(function(module, exports, __webpack_require__) {
+  ...
+}),
+/* 1 module */
+(function(module, exports, __webpack_require__) {
+  ...
+}),
+/* n module */
+(function(module, exports, __webpack_require__) {
+  ...
+})]);
+```
+
+- `webpack` 将所有模块(可以简单理解成文件)包裹于一个函数中，并传入默认参数，将所有模块放入一个数组中，取名为 `modules`，并通过数组的下标来作为 `moduleId`。
+- 将 `modules` 传入一个自执行函数中，自执行函数中包含一个 `installedModules` 已经加载过的模块和一个模块加载函数，最后加载入口模块并返回。
+- `__webpack_require__` 模块加载，先判断 `installedModules` 是否已加载，加载过了就直接返回 `exports` 数据，没有加载过该模块就通过 `modules[moduleId].call(module.exports, module, module.exports, __webpack_require__)` 执行模块并且将 `module.exports` 给返回。
+
+这个时候打开`dist/bundle.js`既可以看到打包完成的文件，新建`dist/index.html`，既可以看到页面输出的内容。
+
+目前简易的webpack已经编写完成，美中不足的是正宗的webpack运行命令都是`webpack`，我们这里也来改进一下下。在`package.json`中添加
+
+```javascript
+"bin": {
+    "wpk": "lib/index.js" //入口文件
+  },
+```
+
+在根目录下运行`npm link`将指定文件链接到全局，直接`wpk`既可以完成打包。如果想使用`npm run build`，也可以在`package.json`中的`script`中添加`"build": "wpk"`即可。
 
 ##### 手写loader
 

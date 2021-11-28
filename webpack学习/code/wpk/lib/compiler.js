@@ -48,15 +48,15 @@ module.exports = class Compiler {
     });
 
     const bundle = `
-        (function(modules) {
-          function require(fileName) {
-            const fn = modules[fileName];
-            const module = { exports:{}};
-            fn(require, module, module.exports)
-            return module.exports
-          }
-          require('${this.entry}')
-        })({${modules}})
+      (function(modules) {
+        function require(fileName) {
+          const fn = modules[fileName];
+          const module = { exports:{}};
+          fn(require, module, module.exports)
+          return module.exports
+        }
+        require('${this.entry}')
+      })({${modules}})
     `;
     // console.log(bundle)
     fs.writeFileSync(outputPath, bundle, "utf-8");

@@ -1,3 +1,3 @@
 export function greeting(name) {
-  return "你好" + name;
+  return "口令" + name;
 }
