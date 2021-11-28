@@ -201,4 +201,4 @@ window.addEventListener("storage",
 
  对于 sessionStorage 和 localStorage 上的任何更改都会触发 storage 事件，但 storage 事 件不会区分这两者。 
 
- 不同浏览器给 localStorage 和 sessionStorage 设置了不同的空间限制，但大多数会限制为每 个源 5MB 
+ 不同浏览器给 localStorage 和 sessionStorage 设置了不同的空间限制，但大多数会限制为每个源 5MB 
