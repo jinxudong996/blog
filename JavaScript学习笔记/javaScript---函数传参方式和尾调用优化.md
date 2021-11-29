@@ -118,3 +118,30 @@ function factorial(n, total) {
  如果改写成尾递归，只保留一个调用记录，复杂度 O(1) 。 
 
  通过递归 计算斐波纳契数列的函数： 
+
+```javascript
+function fib(n) {
+ if (n < 2) {
+ return n;
+ }
+ return fib(n - 1) + fib(n - 2);
+}
+console.log(fib(0)); // 0
+console.log(fib(1)); // 1
+console.log(fib(2)); // 1
+console.log(fib(3)); // 2
+console.log(fib(4)); // 3
+console.log(fib(5)); // 5
+console.log(fib(6)); // 8 
+```
+
+尾调用优化
+
+```
+function Fibonacci2 (n , ac1 = 1 , ac2 = 1) {
+  if( n <= 1 ) {return ac2};
+
+  return Fibonacci2 (n - 1, ac2, ac1 + ac2);
+}
+```
+
