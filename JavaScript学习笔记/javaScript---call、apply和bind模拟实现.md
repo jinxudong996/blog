@@ -272,6 +272,12 @@ Function.prototype.bind2 = function (context) {
 
 }
 
+```
+
+测试一下
+
+```javascript
+
 var foo = {
     value: 1
 };
@@ -283,7 +289,7 @@ function bar(name, age) {
 
 }
 
-var bindFoo = bar.bind(foo, 'daisy');
+var bindFoo = bar.bind2(foo, 'daisy');
 bindFoo('18');
 //1
 //daisy
