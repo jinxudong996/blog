@@ -6,38 +6,17 @@
 </head>
 <body>
 <script type="text/javascript">
-    function createIterator(items) {
-        var i = 0;
-        return {
-            next: function() {
-                var done = i >= items.length;
-                var value = !done ? items[i++] : undefined;
-
-                return {
-                    done: done,
-                    value: value
-                };
-            }
-        };
+   function* foo(x) {
+      console.log(3)
+      var y = 2 * (yield (x + 1));
+      var z = yield (y / 3);
+      return (x + y + z);
     }
-
-    // iterator 就是一个迭代器对象
-    var iterator = createIterator([1, 2, 3]);
-
-    console.log(iterator.next()); // { done: false, value: 1 }
-    console.log(iterator.next()); // { done: false, value: 2 }
-    console.log(iterator.next()); // { done: false, value: 3 }
-    console.log(iterator.next()); // { done: true, value: undefined }
-
-
-    iterator[Symbol.iterator] = function() {
-        return createIterator([1, 2, 3]);
-    };
-
-    for (value of iterator) {
-        console.log(value);
-    }
-
+    console.log(1)
+    var a = foo(5);
+    console.log(2)
+    a.next() // Object{value:6, done:false}
+    console.log(4)
 </script>
 </body>
 </html>
