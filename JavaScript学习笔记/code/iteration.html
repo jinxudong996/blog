@@ -6,17 +6,24 @@
 </head>
 <body>
 <script type="text/javascript">
-   function* foo(x) {
-      console.log(3)
-      var y = 2 * (yield (x + 1));
-      var z = yield (y / 3);
-      return (x + y + z);
-    }
-    console.log(1)
-    var a = foo(5);
-    console.log(2)
-    a.next() // Object{value:6, done:false}
-    console.log(4)
+   var Singleton = function( name ){
+     this.name = name;
+     this.instance = null;
+    };
+    Singleton.prototype.getName = function(){
+     alert ( this.name );
+    };
+    Singleton.getInstance = function( name ){
+     if ( !this.instance ){
+     this.instance = new Singleton( name );
+     }
+     return this.instance;
+    };
+    var a = Singleton.getInstance( 'sven1' );
+    var b = Singleton.getInstance( 'sven2' );
+    alert ( a === b ); // true 
+    console.log(Singleton)
+
 </script>
 </body>
 </html>
