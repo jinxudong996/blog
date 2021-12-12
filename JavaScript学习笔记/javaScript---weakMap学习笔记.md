@@ -1,132 +1,145 @@
-#### 数组去重
+##### 简介
 
-###### indexOf
+`WeakMap`与`map`结构类似，用于生成键值对的集合。`JavaScript`对象本质就是键值对的集合，但只能用字符串当做键，`ES6`提供了Map数据结构，它类似于对象，也是键值对的集合，但是“键”的范围不限于字符串，各种类型的值（包括对象）都可以当作键。也就是说，Object 结构提供了“字符串—值”的对应，Map 结构提供了“值—值”的对应，是一种更完善的 Hash 结构实现。 
+
+`WeakMap`只接受对象作为键名，不接受其他类型的值作为健名，包括null。
 
 ```javascript
-var array = [1, 1, '1'];
+const map = new WeakMap();
+map.set(1, 2)
+// TypeError: 1 is not an object!
+map.set(Symbol(), 2)
+// TypeError: Invalid value used as weak map key
+map.set(null, 2)
+// TypeError: Invalid value used as weak map key
+```
 
-function unique(array) {
-    var res = [];
-    for (var i = 0, len = array.length; i < len; i++) {
-        var current = array[i];
-        if (res.indexOf(current) === -1) {
-            res.push(current)
-        }
+`WeakMap`的键名所指向的对象，是个弱引用，不计入垃圾回收机制 。只要所引用对象的其他引用都被清除，垃圾回收机制就会释放改对象所占用的内存。
+
+ WeakMap 弱引用的只是键名，而不是键值。键值依然是正常引用。 
+
+```javascript
+const wm = new WeakMap();
+let key = {};
+let obj = {foo: 1};
+
+wm.set(key, obj);
+obj = null;
+wm.get(key)
+// Object {foo: 1}
+```
+
+可以写个node的小demo验证下这个观点：
+
+在命令行运行`node --expose-gc`，表示允许手动执行垃圾回收机制。随后手动执行一次垃圾回收机制，保证获取的内存使用状态准确`global.gc()`，随后运行`process.memoryUsage()`查看运行状态：
+
+```
+{
+  rss: 21884928,
+  heapTotal: 4468736,
+  heapUsed: 2797232,
+  external: 1685266,
+  arrayBuffers: 34509
+}
+```
+
+随后新建一个WeakMap实例，并保存一个较大的变量，`let wm = new WeakMap();` `let key = newArray(5*1024*1024)` `wm.set(key, 1)`
+
+随后手动清除内存，再次查看内存，可以看到WeakMap对值的引用并没有消失：
+
+```
+{
+  rss: 54235136,
+  heapTotal: 46682112,
+  heapUsed: 45074784,
+  external: 1685299,
+  arrayBuffers: 75462
+}
+```
+
+而清除key的引用，可以看到`WeakMap`的键名所指向的对象，是个弱引用，不计入垃圾回收机制 。只要所引用对象的其他引用都被清除，垃圾回收机制就会释放改对象所占用的内存。
+
+```
+key = null;
+global.gc();
+process.memoryUsage();
+//打印结果
+{
+  rss: 12255232,
+  heapTotal: 4734976,
+  heapUsed: 3004776,
+  external: 1685290,
+  arrayBuffers: 108221
+}
+```
+
+ WeakMap 与 Map 在 API 上的区别主要是两个，一是没有遍历操作（即没有`keys()`、`values()`和`entries()`方法），也没有`size`属性。  二是无法清空，即不支持`clear`方法。因此，`WeakMap`只有四个方法可用：`get()`、`set()`、`has()`、`delete()`。 
+
+```javascript
+const wm = new WeakMap();
+
+// size、forEach、clear 方法都不存在
+wm.size // undefined
+wm.forEach // undefined
+wm.clear // undefined
+```
+
+
+
+##### 用途
+
+###### 1.存储dom节点
+
+```javascript
+let myWeakmap = new WeakMap();
+
+myWeakmap.set(
+  document.getElementById('logo'),
+  {timesClicked: 0})
+;
+
+document.getElementById('logo').addEventListener('click', function() {
+  let logoData = myWeakmap.get(document.getElementById('logo'));
+  logoData.timesClicked++;
+}, false);
+```
+
+`document.getElementById('logo')`是一个 DOM 节点，每当发生`click`事件，就更新一下状态。我们将这个状态作为键值放在 WeakMap 里，对应的键名就是这个节点对象。一旦这个 DOM 节点删除，该状态就会自动消失，不存在内存泄漏风险。 
+
+###### 2.保存私有变量
+
+```javascript
+const _private = new WeakMap();
+
+class Example {
+  constructor() {
+    _private.set(this, 'private');
+  }
+  getName() {
+  	return _private.get(this);
+  }
+}
+
+var ex = new Example();
+
+console.log(ex.getName()); // private
+console.log(ex.name); // undefined
+```
+
+###### 3.数据缓存
+
+```javascript
+const cache = new WeakMap();
+function countOwnKeys(obj) {
+    if (cache.has(obj)) {
+        console.log('Cached');
+        return cache.get(obj);
+    } else {
+        console.log('Computed');
+        const count = Object.keys(obj).length;
+        cache.set(obj, count);
+        return count;
     }
-    return res;
-}
-
-console.log(unique(array)); //[ 1, '1' ]
-```
-
-这种方式比较常规，就是新建一个数组，遍历待去重数组，在新数组中调用`indexOf`检测如果没有改项就添加到新数组中。
-
-###### 排序后去重
-
-```javascript
-var array = [1,100,8,9,8000,1,9]
-
-function unique(array) {
-    var res = [];
-    var sortedArray = array.sort((a,b) => { return b - a });
-    var seen;
-    for (var i = 0, len = sortedArray.length; i < len; i++) {
-        // 如果是第一个元素或者相邻的元素不相同
-        if (!i || seen !== sortedArray[i]) {
-            res.push(sortedArray[i])
-        }
-        seen = sortedArray[i];
-    }
-    return res;
-}
-
-console.log(unique(array)); 
-//[ 8000, 100, 9, 8, 1 ]
-```
-
-首选排序下，进行遍历，将遍历的值用个变量存储下，下次遍历时进行对比，如果不一致就塞进申明的新数组里。
-
-###### filter
-
-```javascript
-var array = [1, 2, 1, 1, '1'];
-
-function unique(array) {
-    var res = array.filter(function(item, index, array){
-        return array.indexOf(item) === index;
-    })
-    return res;
-}
-
-console.log(unique(array));
-```
-
-这种方式主要是利用`indexOf`方法来判断返回的数值和当前的序列号是否一致，配合过滤函数来完成去重，还是蛮巧妙的。
-
-###### set
-
-ES6新增了set()，去重就很简单了。
-
-```javascript
-var unique = (a) => [...new Set(a)]
-```
-
-
-
-#### 求最大值
-
-```
-Math.max(value1[,value2, ...]) 
-```
-
-> 返回给定的一组数字中的最大值。如果给定的参数中至少有一个参数无法被转换成数字，则会返回 [`NaN`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/NaN)。 
-
-```javascript
-var arr = [6, 4, 1, 8, 2, 11, 23];
-console.log(Math.max(...arr))
-```
-
-上面是使用静态方法`Math.max`来获取最大值，也可以排序来获取：
-
-```javascript
-var arr = [6, 4, 1, 8, 2, 11, 23];
-
-arr.sort(function(a,b){return a - b;});
-console.log(arr[arr.length - 1])
-```
-
-
-
-#### 数组扁平化
-
-就是将多维数组展开转化为一个一维数组，
-
-```javascript
-var arr = [1, [2, [3, 4]]];
-
-function flatten(arr) {
-    var result = [];
-    for (var i = 0, len = arr.length; i < len; i++) {
-        if (Array.isArray(arr[i])) {
-            result = result.concat(flatten(arr[i]))
-        }
-        else {
-            result.push(arr[i])
-        }
-    }
-    return result;
-}
-```
-
-通过`Array.isArray`来判断数组某一项如果是数组就递归调用该函数，如果不是就存放到新数组里。
-
-如果数组的元素是纯数字，可以用toString方法：
-
-```javascript
-function flatten(arr) {
-    return arr.toString().split(',').map(function(item){
-        return Number(item)
-    })
 }
 ```
 
