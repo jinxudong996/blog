@@ -1,55 +1,55 @@
 vue源码学习
 
-- 源码调试
+##### 源码调试
 
-  直接从github上拉下代码，目前看的是2.6版本的。然后执行npm install安装下所需要的插件，打开package.json文件，
+直接从github上拉下代码，目前看的是2.6版本的。然后执行npm install安装下所需要的插件，打开package.json文件，
 
-  ```JavaScript
-  "scripts": {
-      "dev": "rollup -w -c scripts/config.js --environment TARGET:web-full-dev",
-      "dev:cjs": "rollup -w -c scripts/config.js --environment TARGET:web-runtime-cjs-dev",
-      "dev:esm": "rollup -w -c scripts/config.js --environment TARGET:web-runtime-esm",
-      "dev:test": "karma start test/unit/karma.dev.config.js",
-      "dev:ssr": "rollup -w -c scripts/config.js --environment TARGET:web-server-renderer",
-      "dev:compiler": "rollup -w -c scripts/config.js --environment TARGET:web-compiler ",
-      "dev:weex": "rollup -w -c scripts/config.js --environment TARGET:weex-framework",
-      "dev:weex:factory": "rollup -w -c scripts/config.js --environment TARGET:weex-factory",
-      "dev:weex:compiler": "rollup -w -c scripts/config.js --environment TARGET:weex-compiler ",
-  ```
+```JavaScript
+"scripts": {
+    "dev": "rollup -w -c scripts/config.js --environment TARGET:web-full-dev",
+    "dev:cjs": "rollup -w -c scripts/config.js --environment TARGET:web-runtime-cjs-dev",
+    "dev:esm": "rollup -w -c scripts/config.js --environment TARGET:web-runtime-esm",
+    "dev:test": "karma start test/unit/karma.dev.config.js",
+    "dev:ssr": "rollup -w -c scripts/config.js --environment TARGET:web-server-renderer",
+    "dev:compiler": "rollup -w -c scripts/config.js --environment TARGET:web-compiler ",
+    "dev:weex": "rollup -w -c scripts/config.js --environment TARGET:weex-framework",
+    "dev:weex:factory": "rollup -w -c scripts/config.js --environment TARGET:weex-factory",
+    "dev:weex:compiler": "rollup -w -c scripts/config.js --environment TARGET:weex-compiler ",
+```
 
-  其中dev里的命令分别是
+其中dev里的命令分别是
 
-  > rollup   vue源码使用的rollup打包的
-  >
-  > -w      监控所有的代码  当源码发生变化时 重新打包
-  >
-  > -c    设置配置文件   scripts/config.js
-  >
-  > --environment  设置环境变量  通过环境变量来打成不同的包
+> rollup   vue源码使用的rollup打包的
+>
+> -w      监控所有的代码  当源码发生变化时 重新打包
+>
+> -c    设置配置文件   scripts/config.js
+>
+> --environment  设置环境变量  通过环境变量来打成不同的包
 
-  这里有一个小坑，直接运行npm run dev会报错，网上找了些资料说是 [**rollup-plugin-alias.js**](https://gist.github.com/zhoukekestar/97e1b3c8ad129d8740668b5b44f97d18#file-rollup-plugin-alias-js) 这个文件只支持win32的
+这里有一个小坑，直接运行npm run dev会报错，网上找了些资料说是 [**rollup-plugin-alias.js**](https://gist.github.com/zhoukekestar/97e1b3c8ad129d8740668b5b44f97d18#file-rollup-plugin-alias-js) 这个文件只支持win32的
 
-  ```JavaScript
-  // ------------line 13 ------------
-  const VOLUME = /^([A-Z]:)/i; // ignore case
-  const IS_WINDOWS = os.platform() === 'win32';
-  ```
+```JavaScript
+// ------------line 13 ------------
+const VOLUME = /^([A-Z]:)/i; // ignore case
+const IS_WINDOWS = os.platform() === 'win32';
+```
 
-  找到上述的js替换下，就能解决。[解决方案](https://github.com/vuejs/vue/issues/2771)
+找到上述的js替换下，就能解决。[解决方案](https://github.com/vuejs/vue/issues/2771)
 
-  打包完成后就可以看到dist下更新的文件，此时就可以去examples文件下进行源码调试。
+打包完成后就可以看到dist下更新的文件，此时就可以去examples文件下进行源码调试。
 
-  以examples文件下的grid来举例，在index.html中的script标签中，将vue链接改为刚打的包
+以examples文件下的grid来举例，在index.html中的script标签中，将vue链接改为刚打的包
 
-  ```html
-  <script src="../../dist/vue.js"></script>
-  ```
+```html
+<script src="../../dist/vue.js"></script>
+```
 
-  随后在浏览器中打开该文件，审查元素，在grid.js中的实例化vue处设置断点，单步进入，第一个文件就是`core/instance/index.js`，判断环境变量
+随后在浏览器中打开该文件，审查元素，在grid.js中的实例化vue处设置断点，单步进入，第一个文件就是`core/instance/index.js`，判断环境变量
 
-  ![](C:\Users\Thomas东\AppData\Roaming\Typora\typora-user-images\1633427366353.png)
+![](C:\Users\Thomas东\AppData\Roaming\Typora\typora-user-images\1633427366353.png)
 
-  接下来就可以进行后续的源码学习。
+接下来就可以进行后续的源码学习。
 
 - 框架结构
 
