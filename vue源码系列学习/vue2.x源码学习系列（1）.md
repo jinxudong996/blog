@@ -731,3 +731,4 @@ export function createPatchFunction (backend) {
 ```
 
  `createPatchFunction` 内部定义了一系列的辅助方法，最终返回了一个 `patch` 方法，这个方法就赋值给了 `vm._update` 函数里调用的 `vm.__patch__`。 
+
