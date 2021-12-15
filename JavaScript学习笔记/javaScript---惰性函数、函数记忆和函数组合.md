@@ -62,10 +62,63 @@ function memoize(f) {
 }
 ```
 
+这种就是用一个闭包来存储函数执行的值，key是参数长度和参数组成的字符串，执行函数前先遍历存储对象，如果存在key就返回对象中的值，如果不存在就执行函数并存储在对象中。
 
+因为使用`join`拼接字符串，然而如果是个参数是对象就会出问题，可以更改下：
 
-
+```javascript
+var memoize = function(func, hasher) {
+    var memoize = function(key) {
+        var cache = memoize.cache;
+        var address = '' + (hasher ? hasher.apply(this, arguments) : key);
+        if (!cache[address]) {
+            cache[address] = func.apply(this, arguments);
+        }
+        return cache[address];
+    };
+    memoize.cache = {};
+    return memoize;
+};
+```
 
 
 
 #### 函数组合
+
+ 我们需要写一个函数，输入 'kevin'，返回 'HELLO, KEVIN'。 
+
+```javascript
+var toUpperCase = function(x) { return x.toUpperCase(); };
+var hello = function(x) { return 'HELLO, ' + x; };
+
+var greet = function(x){
+    return hello(toUpperCase(x));
+};
+
+greet('kevin');
+```
+
+然而这种由内向外的写法，一旦嵌套层数过多，可读性就会很差，希望改写成从左向右的写法：
+
+```javascript
+function compose() {
+    var args = arguments;
+    var start = args.length - 1;
+    return function() {
+        var i = start;
+        var result = args[start].apply(this, arguments);
+        while (i--) result = args[i].call(this, result);
+        return result;
+    };
+};
+```
+
+```javascript
+var toUpperCase = function(x) { return x.toUpperCase(); };
+var hello = function(x) { return 'HELLO, ' + x; };
+
+let a = compose(hello,toUpperCase)
+console.log(a('nick'))
+```
+
+这种就是取得`compose`参数的最后一个函数，并将执行的结果依次传递给前一位，执行完毕后返回。
