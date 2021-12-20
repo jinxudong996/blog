@@ -75,3 +75,107 @@ module.exports = MyPromise;
 
 验证一下：
 
+```javascript
+const MyPromise = require('./promise');
+
+let p = new MyPromise( (resolve,reject) => {
+    resolve('成功。。。')
+})
+
+p.then( resolve => {
+    console.log(resolve)
+}, reject => {
+    console.log(reject)
+})
+
+//promise成功。。。
+```
+
+
+
+##### 添加异步逻辑
+
+如果在resolve函数中添加异步代码，这个promise就会出现问题：
+
+```javascript
+const MyPromise = require('./promise');
+
+let p = new MyPromise( (resolve,reject) => {
+    setTimeout(() => {
+        resolve('成功。。。')
+    },2000)
+})
+
+p.then( resolve => {
+    console.log(resolve)
+}, reject => {
+    console.log(reject)
+})
+```
+
+这里什么也不会打印，因为resolve()会被添加到异步队列中，先等主线程任务执行完了才会轮到它，也就是先会执行then方法，而then方法中只判断了两种状态，没有判断等待状态，这里在then方法中添加一个等待状态：
+
+```javascript
+then = (successCB, failCB) => {
+    if (this.status === FULFILLED) {
+        successCB(this.value);
+    } else if (this.status === REJECTED) {
+        failCB(this.value);
+    } else {
+        //异步  等待状态
+        this.successCB = successCB;
+        this.failCB = failCB;
+    }
+}
+```
+
+用两个变量存储回调函数，随后根据promise的状态，在有回调的情况下执行回调：
+
+```javascript
+resolve = (value) => {
+    if (this.status !== PENDING) return;
+    this.status = FULFILLED;
+    this.value = value;
+    //成功回调
+    this.successCB && this.successCB(this.value)
+}
+
+reject = (value) => {
+    if (this.status !== PENDING) return;
+    this.value = value;
+    this.status = REJECTED;
+    //失败回调
+    this.failCallback && this.failCallback(this.value)
+}
+```
+
+验证一下：
+
+```javascript
+const MyPromise = require('./promise');
+
+let p = new MyPromise( (resolve,reject) => {
+    setTimeout(() => {
+        resolve('成功。。。')
+    },2000)
+})
+
+p.then( resolve => {
+    console.log(resolve)
+}, reject => {
+    console.log(reject)
+})
+
+//2s后 打印 成功。。。
+```
+
+
+
+##### 多次调用then方法
+
+
+
+##### then方法的链式调用
+
+
+
