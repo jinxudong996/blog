@@ -32,5 +32,46 @@ promise构造函数返回一个promise对象实例，这个返回的promise对�
 
 ##### 核心逻辑
 
-编写一个`myPromise`的类
+编写一个`myPromise`的类：
+
+```javascript
+const PENDING = 'pending'; // 等待
+const FULFILLED = 'fulfilled'; // 成功
+const REJECTED = 'rejected'; // 失败
+
+class MyPromise {
+  constructor(executor) {
+    executor(this.resolve, this.reject)
+  }
+
+  status = PENDING; //初始状态
+  value = '';  //成功状态
+  reason = ''; //失败状态
+
+  resolve = (value) => {
+    if (this.status !== PENDING) return;
+    this.status = FULFILLED;
+    this.value = value;
+  }
+
+  reject = (value) => {
+    if (this.status !== PENDING) return;
+    this.value = value;
+    this.status = REJECTED;
+  }
+  then = (successCB, failCB) => {
+    if (this.status === FULFILLED) {
+      successCB(this.value);
+    } else if (this.status === REJECTED) {
+      failCB(this.value);
+    }
+  }
+}
+
+module.exports = MyPromise;
+```
+
+首先定义了三个全局变量，存储着promise的三种不同的状态，随后定义一个`MyPromise`类，构造函数中传入一个执行器函数，在构造函数中进行调用。定义了三个成员变量：status来保存promise的状态，value和reason来保存执行的结果，分别在resolve和reject中来更改promise的状态，随后在then方法中根据promise的状态来执行不同的回调函数。
+
+验证一下：
 
