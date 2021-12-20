@@ -68,7 +68,7 @@ class MyPromise {
   }
 }
 
-module.exports = MyPromise;
+module.exports = MyPromise; 
 ```
 
 首先定义了三个全局变量，存储着promise的三种不同的状态，随后定义一个`MyPromise`类，构造函数中传入一个执行器函数，在构造函数中进行调用。定义了三个成员变量：status来保存promise的状态，value和reason来保存执行的结果，分别在resolve和reject中来更改promise的状态，随后在then方法中根据promise的状态来执行不同的回调函数。
