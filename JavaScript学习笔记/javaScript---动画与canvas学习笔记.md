@@ -36,7 +36,7 @@ window.cancelAnimationFrame(requestID);
 
 ##### 节流
 
-[节流与防抖](https://juejin.cn/post/7030787304696315918)主要通过定时器来完成的，这里也可以使用requestAnimationFrame函数配合定时器来完成一个防抖函数，计时器可以限制实际的操作执行间隔，而 requestAnimationFrame 控制 在浏览器的哪个渲染周期中执行。 
+[节流与防抖](https://juejin.cn/post/7030787304696315918)主要通过定时器来完成的，这里也可以使用requestAnimationFrame函数配合定时器来完成一个防抖函数，计时器可以限制实际的操作执行间隔，而 requestAnimationFrame 控制在浏览器的哪个渲染周期中执行。 
 
 ```javascript
 let enabled = true;
@@ -211,11 +211,3 @@ context.lineTo(-65, 0);
 // 描画路径
 context.stroke();
 ```
-
-绘制图像
-
-
-
-
-
-##### WebGl
