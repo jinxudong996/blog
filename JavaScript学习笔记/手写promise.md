@@ -173,9 +173,121 @@ p.then( resolve => {
 
 ##### 多次调用then方法
 
+多次调用then方法主要分为同步和异步，同步目前代码已经可以支持了，then方法中会根据不同的状态来执行不同的回调。异步的话，就需要将回调函数存储起来，将resolve中的执行结果分别传入：
+
+```javascript
+// 成功回调
+  successCB = [];
+  // 失败回调
+  failCallback = [];
+  resolve = (value) => {
+    if (this.status !== PENDING) return;
+    this.status = FULFILLED;
+    this.value = value;
+    //成功回调
+    // this.successCB && this.successCB(this.value)
+    while(this.successCB.length) this.successCB.shift()(this.value)
+  }
+
+  reject = (value) => {
+    if (this.status !== PENDING) return;
+    this.value = value;
+    this.status = REJECTED;
+    //失败回调
+    // this.failCallback && this.failCallback(this.value)
+    while(this.failCallback.length) this.failCallback.shift()(this.value)
+  }
+  then = (successCB, failCB) => {
+    if (this.status === FULFILLED) {
+      successCB(this.value);
+    } else if (this.status === REJECTED) {
+      failCB(this.value);
+    }else{
+      //异步  等待状态
+      this.successCB.push(successCB);
+      this.failCallback.push(failCB);
+    }
+  }
+```
+
+定义两个成员变量来存储回调函数，执行then方法中依次将回调加入成员变量中，随后分别在resolve和reject中执行回调，执行回调时利用while遍历数组，shift返回第一个元素，也就是根据加入的顺序依次执行。
+
+验证一下：
+
+```javascript
+let p = new MyPromise( (resolve,reject) => {
+    setTimeout(() => {
+        reject('成功。。。')
+    },2000)
+})
+
+p.then( resolve => {
+    console.log(resolve)
+}, reject => {
+    console.log(reject)
+})
+p.then( resolve => {
+    console.log(resolve)
+}, reject => {
+    console.log(reject)
+})
+//成功。。。
+//成功。。。
+```
+
 
 
 ##### then方法的链式调用
 
+实现then方法的链式调用，首先需要在then方法中返回一个promise对象，随后再判断是普通值还是promise对象，如果是普通值，直接将值传递给新promise对象的resolve方法即可，如果是promise对象，就需要判断promise对象的状态，如果是成功就需要将值传递给resolve方法，失败的话传递给reject方法。
+
+```javascript
+then = (successCB, failCB) => {
+    let p2 =  new MyPromise((resolve,reject) => {
+      if (this.status === FULFILLED) {
+        let x = successCB(this.value);
+        // resolve(x)
+        resolvePromise(x,resolve,reject)
+      } else if (this.status === REJECTED) {
+        failCB(this.value)
+      }else{
+        //异步  等待状态
+         this.successCB.push(successCB);
+         this.failCallback.push(failCB);
+      }
+    })
+    return p2
+  }
+```
+
+```javascript
+function resolvePromise (x, resolve, reject) {
+  if (x instanceof MyPromise) {
+    // promise 对象
+    x.then(resolve, reject);
+  } else {
+    // 普通值
+    resolve(x);
+  }
+}
+```
 
 
+
+##### 捕获错误
+
+
+
+##### promise.all实现
+
+
+
+##### promise.resolve实现
+
+
+
+##### finally实现
+
+
+
+##### catch实现
