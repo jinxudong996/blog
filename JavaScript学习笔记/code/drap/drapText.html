@@ -1,0 +1,96 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <title>拖放示例-文本</title>
+</head>
+<style>
+.src {
+    display: flex;
+}
+
+.dropabled {
+    flex: 1;
+}
+
+.txt {
+    color: green;
+}
+
+.img {
+    width: 100px;
+    height: 100px;
+    border: 1px solid gray;
+}
+
+.target {
+    width: 200px;
+    height: 200px;
+    line-height: 200px;
+    text-align: center;
+    border: 1px solid gray;
+    color: red;
+}
+</style>
+
+<body>
+    <div class="src">
+        <div class="dragabled">
+            <div class="txt" id="txt">
+                所有的文字都可拖拽。
+                <p draggable="true">此段文字设置了属性draggable="true"</p>  
+            </div>
+            <div class="url" id="url">
+                <a href="http://weiqinl.com" target="_blank">我是url:http://weiqinl.com</a>
+            </div>
+            <img class="img" id="tupian1" src="img1.png" alt="图片1" />
+            <img class="img" id="tupian2" src="img2.png" alt="图片2" />
+            
+        </div>
+        <div id='target' class="dropabled target">Drop Here</div>
+    </div>
+    <script>
+        var dragSrc = document.getElementById('txt')
+        var target = document.getElementById('target')
+
+        dragSrc.ondrag = handle_drag
+        dragSrc.ondragend = handle_end
+
+        function handle_drag(e){
+            console.log(e)
+            console.log(e.target)
+        }
+
+        function handle_end(e){
+            console.log(e)
+            console.log("####################")
+        }
+        target.ondragenter = handle_enter
+        target.ondragleave = handle_ondragleave
+        function handle_enter(e) {
+            console.log(e)
+            console.log('handle_enter-当元素进入目的地时触发')
+            e.preventDefault()
+        }
+        function handle_ondragleave(e){
+            console.log('handle_enter-当元素离开目的地时触发')
+        }
+
+    </script>
+    <script>
+function dragover_handler(ev) {
+ ev.preventDefault();
+ ev.dataTransfer.dropEffect = "move";
+}
+function drop_handler(ev) {
+ ev.preventDefault();
+ // Get the id of the target and add the moved element to the target's DOM
+ var data = ev.dataTransfer.getData("text/plain");
+ ev.target.appendChild(document.getElementById(data));
+}
+</script>
+
+<p id="target" ondrop="drop_handler(event)" ondragover="dragover_handler(event)">Drop Zone</p>
+</body>
+
+</html>
