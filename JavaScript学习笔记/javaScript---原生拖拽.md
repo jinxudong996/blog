@@ -55,6 +55,11 @@
 
 - ondrop ，当元素或选中的文本在可释放目标上被释放时触发 
 
+总结一下：
+
+- 被拖动元素：ondragstart、ondrop 、ondraggend、ondrag
+- 放置区元素：ondragleave、ondragover、ondragenter、ondrop 
+
 ##### 基本步骤
 
 - 确定可拖拽目标
@@ -123,6 +128,109 @@
 
 ##### 例子
 
-图片拖放https://codepen.io/mudontire/pen/Kjmzzp
+实现图片拖放的小例子，通过切换class来实现图片的展示。
 
-列表拖放https://jsrun.net/33YKp/embedded/all/dark/
+```html
+<!DOCTYPE html>
+<html>
+<head>
+	<title>图片拖放</title>
+	<meta charset="utf-8">
+	<style type="text/css">
+		body {
+		  background-color: darksalmon;
+		}
+
+		.draggable {
+		  background-image: url('http://source.unsplash.com/random/150x150');
+		  position: relative;
+		  height: 150px;
+		  width: 150px;
+		  top: 5px;
+		  left: 5px;
+		  cursor: pointer;
+		}
+
+		.droppable {
+		  display: inline-block;
+		  height: 160px;
+		  width: 160px;
+		  margin: 10px;
+		  border: 3px salmon solid;
+		  background-color: white;
+		}
+
+		.dragging {
+		  border: 4px yellow solid;
+		}
+
+		.drag-over {
+		  background-color: #f4f4f4;
+		  border-style: dashed;
+		}
+
+		.invisible {
+		  display: none;
+		}
+	</style>
+</head>
+<body>
+<div class="droppable">
+	<div class="draggable" draggable="true"></div>
+</div>
+<div class="droppable"></div>
+<div class="droppable"></div>
+<div class="droppable"></div>
+<div class="droppable"></div>
+
+<script type="text/javascript">
+	// 查询draggable和droppable
+const draggable = document.querySelector('.draggable');
+const droppables = document.querySelectorAll('.droppable');
+
+// 监听draggable的相关事件
+draggable.addEventListener('dragstart', dragStart);
+draggable.addEventListener('dragend', dragEnd);
+
+function dragStart() {
+	setTimeout(() => {
+    this.className = 'invisible';
+  }, 0);
+	
+}
+
+function dragEnd() {
+	
+  this.className = 'draggable';
+}
+
+// 监听droppable的相关事件
+for (const droppable of droppables) {
+  droppable.addEventListener('dragover', dragOver);
+  droppable.addEventListener('dragleave', dragLeave);
+  droppable.addEventListener('dragenter', dragEnter);
+  droppable.addEventListener('drop', dragDrop);
+}
+
+function dragOver(e) {
+  e.preventDefault();
+}
+
+function dragEnter(e) {
+  e.preventDefault();
+  this.className += ' drag-over';
+}
+
+function dragLeave(e) {
+  this.className = 'droppable';
+}
+
+function dragDrop(e) {
+  this.className = 'droppable';
+  this.append(draggable);
+}
+</script>
+
+</body>
+</html>
+```
