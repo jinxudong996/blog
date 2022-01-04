@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>虚拟DOM</title>
+	<meta charset="utf-8">
+</head>
+<body>
+<script src="./element.js"></script>
+<script>
+
+  var ul = new Element('ul', {id: 'list'}, [
+    new Element('li', {class: 'item'}, ['Item 1']),
+    new Element('li', {class: 'item'}, ['Item 2']),
+    new Element('li', {class: 'item'}, ['Item 3'])
+  ])
+  var ulRoot = ul.render()
+  document.body.appendChild(ulRoot)
+
+</script>
+</body>
+</html>
