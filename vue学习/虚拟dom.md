@@ -114,9 +114,9 @@ Element类的构造函数比较简单，就是将传入的标签名称、属性�
 
 ```javascript
 var ul = new Element('ul', {id: 'list'}, [
-new Element('li', {class: 'item'}, ['Item 1']),
-new Element('li', {class: 'item'}, ['Item 2']),
-new Element('li', {class: 'item'}, ['Item 3'])
+    new Element('li', {class: 'item'}, ['Item 1']),
+    new Element('li', {class: 'item'}, ['Item 2']),
+    new Element('li', {class: 'item'}, ['Item 3'])
 ])
 var ulRoot = ul.render()
 document.body.appendChild(ulRoot)
