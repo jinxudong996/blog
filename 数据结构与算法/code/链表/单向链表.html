@@ -41,6 +41,10 @@ class List{
         return cur;
 	}
 
+	// delete(target){
+	// 	let deleteNode = this.find(target);
+ //        this.findPre(deleteNode.val).next = deleteNode.next
+	// }
 	delete(target){
 		let deleteNode = this.find(target);
         this.findPre(deleteNode.val).next = deleteNode.next
@@ -50,9 +54,28 @@ let list = new List('老大')
 list.add('老二', '老大')
 list.add('老三', '老二')
 list.add('老四', '老三')
-list.delete('老三')
 
 console.log(list)
+
+
+//反转链表
+var reverseList = function(head) {
+    let node = null
+    while(head.next){
+        node.next = getLastNode(head.next)
+    }
+    return node
+};
+
+function getLastNode(head){
+    let lastNode = head
+    while(lastNode.next){
+        lastNode = head.next
+    }
+    return lastNode
+}
+
+// console.log(getLastNode(list))
 
 
 

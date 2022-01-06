@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>双向链表</title>
+	<meta charset="utf-8">
+</head>
+<body>
+<script type="text/javascript">
+
+class List{
+	constructor(val){
+		this.val = val;
+    	this.next = null;
+    	this.pre = null;
+	}
+	find(target){
+		let cur = this;
+        while (cur.val !== target) {
+            cur = cur.next;
+            if (!cur) {
+                return false
+            }
+        }
+        return cur
+	}
+
+	add(node, target){
+		let newNode = new List(node);
+        let cur = this.find(target);
+        newNode.next = cur.next;
+        newNode.pre = cur;
+        cur.next = newNode
+
+	}
+
+	delete(target){
+		let cur = this.find(target);
+        cur.pre.next = cur.next;
+        cur.next.pre = cur.pre;
+	}
+}
+let list = new List('老大')
+list.add('老二', '老大')
+list.add('老三', '老二')
+list.add('老四', '老三')
+// list.delete('老三')
+
+console.log(list)
+
+
+</script>
+</body>
+</html>
