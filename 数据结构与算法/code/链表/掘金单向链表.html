@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>单向链表</title>
+	<meta charset="utf-8">
+</head>
+<body>
+<script type="text/javascript">
+	//单向链表
+function Node(val) {
+    this.val = val;
+    this.next = null;
+}
+
+function List(node) {
+    this.node = new Node(node);
+    //查找节点
+    this.find = function (target) {
+        let cur = this.node;
+        while (cur.val !== target) {
+            cur = cur.next;
+            if (!cur) {
+                return false
+            }
+        }
+        return cur
+    }
+    //插入节点
+    this.insert = function (node, target) {
+        let newNode = new Node(node);
+        let cur = this.find(target);
+        newNode.next = cur.next;
+        cur.next = newNode
+    }
+    //查找前一个节点
+    this.findPre = function (target) {
+        let cur = this.node;
+        while (cur.next.val !== target) {
+            cur = cur.next
+        }
+        return cur;
+    }
+    //删除节点
+    this.delete = function (target) {
+        let deleteNode = this.find(target);
+        this.findPre(deleteNode).next = deleteNode.next
+    }
+}
+
+let list = new List('pyx')
+list.insert('wyt', 'pyx')
+list.delete('pyx')
+console.log(list.find('pyx'));
+console.log(list.find('wyt'));
+
+</script>
+</body>
+</html>
