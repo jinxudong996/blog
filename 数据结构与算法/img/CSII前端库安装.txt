@@ -1,0 +1,10 @@
+使用nrm工具切换注册表：
+$ npm install -g nrm --registry=http://registry.npm.csii.com.cn
+使用nrm设置注册表别名：
+$ nrm add csii  http://registry.npm.csii.com.cn
+nrm启用注册表：
+$ nrm use csii
+安装依赖：
+$npm install
+启动：
+npm start
