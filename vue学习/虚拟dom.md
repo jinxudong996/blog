@@ -126,10 +126,103 @@ document.body.appendChild(ulRoot)
 
 ##### 比较两颗虚拟DOM树的差异
 
+比较两棵树的差异，正是 Virtual DOM 算法的核心的部分，也就是diff算法。在前段中，很少会跨层级的 移动DOM元素，Virtual DOM只会比较同一个层级。
 
+![a](https://camo.githubusercontent.com/8589323ee9f10643f1c1e0b98b7676ca3a1e4d6c5ef29e99ff028d1dcbf9c5da/687474703a2f2f6c69766f7261732e6769746875622e696f2f626c6f672f7669727475616c2d646f6d2f636f6d706172652d696e2d6c6576656c2e706e67)
 
+在遍历节点树进行比较时，每遍历到一个节点就把该节点和新的的树进行对比。如果有差异的话就记录到一个对象里面。 
 
+差异一般就是我们对DOM的操作，主要包括：
 
+- 替换原来的节点
+- 移动、删除、新增子节点
+- 修改节点属性
+- 更改文本内容
 
+根据上述差异定义几个常量，代表差异类型：
+
+```javascript
+var REPLACE = 0
+var REORDER = 1
+var PROPS = 2
+var TEXT = 3
+```
+
+- 对于节点替换，可以直接判断节点的`tagName`，如果将`div`，`section`就记录：
+
+  ```javascript
+  patches[0] = [{
+    type: REPALCE,
+    node: newNode // el('section', props, children)
+  }]
+  ```
+
+- 给`div`新增属性，记录为
+
+  ```javascript
+  patches[0] = [{
+    type: REPALCE,
+    node: newNode // el('section', props, children)
+  }, {
+    type: PROPS,
+    props: {
+      id: "container"
+    }
+  }]
+  ```
+
+- 文本节点更改
+
+  ```javascript
+  patches[2] = [{
+    type: TEXT,
+    content: "Virtual DOM2"
+  }]
+  ```
+
+- 如果对节点进行增删查改，就比较复杂了。如果直接替换，DOM开销就很大了，实际上我们只要知道节点移动方式即可。比如旧节点顺序：a b c d e f g h i，新节点顺序：a b c h d f g i j。现在知道了新旧顺序，求最小的插入、删除操作，也就是字符串的最小编辑距离问题（力扣72）。我们将节点的操作记录为：
+
+  ```javascript
+  patches[0] = [{
+    type: REORDER,
+    moves: [{remove or insert}, {remove or insert}, ...]
+  }]
+  ```
+
+这里核心部分关于diff的实现，还有点懵，暂做个记录，慢慢看。[原代码](https://github.com/livoras/list-diff)
 
 ##### 用差异构建真正的DOM树
+
+有了的`patches`对象中找出当前遍历的节点差异，然后进行 DOM 操作 
+
+```javascript
+function applyPatches (node, currentPatches) {
+  _.each(currentPatches, function (currentPatch) {
+    switch (currentPatch.type) {
+      case REPLACE:
+        var newNode = (typeof currentPatch.node === 'string')
+          ? document.createTextNode(currentPatch.node)
+          : currentPatch.node.render()
+        node.parentNode.replaceChild(newNode, node)
+        break
+      case REORDER:
+        reorderChildren(node, currentPatch.moves)
+        break
+      case PROPS:
+        setProps(node, currentPatch.props)
+        break
+      case TEXT:
+        if (node.textContent) {
+          node.textContent = currentPatch.content
+        } else {
+          // fuck ie
+          node.nodeValue = currentPatch.content
+        }
+        break
+      default:
+        throw new Error('Unknown patch type ' + currentPatch.type)
+    }
+  })
+}
+```
+
