@@ -1,4 +1,5 @@
 const parser = require('@babel/parser');
+const types = require('@babel/types');
 const traverse = require('@babel/traverse').default;
 const generate = require('@babel/generator').default;
 
@@ -24,12 +25,11 @@ const ast = parser.parse(sourceCode, {
     plugins: ['jsx']
 });
 
+const targetCalleeName = ['log', 'info', 'error', 'debug'].map(item => `console.${item}`);
 traverse(ast, {
-    CallExpression (path, state) {
-        if ( types.isMemberExpression(path.node.callee) 
-            && path.node.callee.object.name === 'console' 
-            && ['log', 'info', 'error', 'debug'].includes(path.node.callee.property.name) 
-           ) {
+    CallExpression(path, state) {
+        const calleeName = generate(path.node.callee).code;
+         if (targetCalleeName.includes(calleeName)) {
             const { line, column } = path.node.loc.start;
             path.node.arguments.unshift(types.stringLiteral(`filename: (${line}, ${column})`))
         }
@@ -37,5 +37,5 @@ traverse(ast, {
 });
 
 const { code, map } = generate(ast);
-console.log(generate(ast))
+// console.log(generate(ast))
 console.log(code);
