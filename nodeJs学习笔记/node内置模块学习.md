@@ -228,8 +228,188 @@ console.log(path.resolve())
 ##### 文件操作API
 
 - readFile：从指定文件中读取数据
+
+  该函数接受三个参数。第一个是绝对路径，第二个编码格式，第三个回调函数
+
+  ```javascript
+  const fs = require('fs')
+  const path = require('path')
+  
+  fs.readFile(path.resolve('data.txt'), 'utf-8', (err, data) => {
+      console.log(err)
+      console.log(data)
+  })
+  ```
+
+  
+
 - writeFile：向指定文件中写入数据
+
+  重新覆盖该文件
+
+  ```javascript
+  fs.writeFile('data.txt', 'hello nodeJs', (err) => {
+      if (!err) {
+          fs.readFile(path.resolve('data.txt'), 'utf-8', (err, data) => {
+              console.log(data)
+          })
+      }
+  })
+  ```
+
+  
+
 - appendFile：追加的方式向执行文件中写入数据
+
+  ```javascript
+  fs.appendFile('data.txt',' 追加成功',(err) => {
+      console.log('追加成功~~')
+  })
+  ```
+
+  
+
 - copyFile：将某个文件中的数据拷贝至另一个文件
+
+  ```javascript
+  fs.copyFile('data.txt','text.txt',(err) => {
+      console.log("copy success~~")
+  })
+  ```
+
+  
+
 - watchFile：对指定文件进行监控
+
+  ```javascript
+  fs.watchFile('data.txt',{interval:20},(curr,prev) => {
+      if(curr.mtime !== prev.mtime){
+          console.log('文件被修改了')
+          fs.unwatchFile('data.txt')
+      }
+  })
+  ```
+
+  每20毫秒监听一次data.txt文件，一旦文件被修改，就打印随后取消监听
+
+##### 大文件读写
+
+上面的api都是一次性读文件的所有内容，一旦遇到较大文件就非常的慢，node也提供了open和close文件打开与关闭的操作。
+
+- read
+
+  读操作就是将数据从磁盘文件写入到buffer中，该方法接受五个参数，分别是fd定位当前被打开的文件，buf当前的缓冲区，offset当前从buf的那个位置开始执行写入，length表示当前写入的长度，position表示从当前文件的那个位置开始读取
+
+  ```javascript
+  const fs = require('fs')
+  
+  let buf = Buffer.alloc(10)
+  
+  fs.open('data.txt','r',(err,fd) => {
+      console.log(fd)
+      fs.read(fd,buf,0,4,0,(err,readBytes,data) => {
+          console.log(readBytes)
+          console.log(data)
+          console.log(data.toString())
+      })
+  })
+  // data.txt  内容是0123456789
+  3
+  4
+  <Buffer 30 31 32 33 00 00 00 00 00 00>
+  0123
+  ```
+
+  
+
+- write
+
+  将缓冲区的内容写入磁盘文件
+
+  ```javascript
+  let buf = Buffer.from('0123456789')
+  
+  fs.open('b.txt','w',(err,fd) => {
+      fs.write(fd,buf,0,5,0,(err,writen,buffer) =>{
+          console.log(writen)
+          console.log(buffer)
+          console.log(buffer.toString())
+      })
+  })
+  //
+  5
+  <Buffer 30 31 32 33 34 35 36 37 38 39>
+  0123456789
+  ```
+
+  
+
+##### 实例：md文档抓换成html文件
+
+思路：首先写一个html字符串当做模板，其中的样式使用`{{style}}`，内容使用`{{content}}`
+
+来当占位符，分别读取md文件和css文件，来替换模板中的占位符。
+
+代码：
+
+```javascript
+const fs = require('fs')
+const path = require('path')
+const {marked} = require('marked')
+const browserSync = require('browser-sync')
+
+let mdPath = path.join(__dirname, process.argv[2])
+let cssPath = path.resolve('index.css')
+let htmlPath = mdPath.replace(path.extname(mdPath), '.html')
+
+fs.readFile(mdPath, 'utf-8', (err, data) => {
+  // 将 md--》html
+  let htmlStr = marked(data)
+  console.log(htmlStr)
+  fs.readFile(cssPath, 'utf-8', (err, data) => {
+    let retHtml = temp.replace('{{content}}', htmlStr).replace('{{style}}', data)
+    // 将上述的内容写入到指定的 html 文件中，用于在浏览器里进行展示
+    fs.writeFile(htmlPath, retHtml, (err) => {
+      console.log('html 生成成功了')
+    })
+  })
+})
+
+browserSync.init({
+  browser: '',
+  server: __dirname,
+  watch: true,
+  index: path.basename(htmlPath)
+})
+
+const temp = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+          <meta charset="UTF-8">
+          <title></title>
+          <style>
+              .markdown-body {
+                  box-sizing: border-box;
+                  min-width: 200px;
+                  max-width: 1000px;
+                  margin: 0 auto;
+                  padding: 45px;
+              }
+              @media (max-width: 750px) {
+                  .markdown-body {
+                      padding: 15px;
+                  }
+              }
+              {{style}}
+          </style>
+      </head>
+      <body>
+          <div class="markdown-body colorRed">
+              {{content}}
+          </div>
+      </body>
+      </html>
+  `
+```
 
