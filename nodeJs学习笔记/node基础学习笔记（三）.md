@@ -1,4 +1,4 @@
-MongoDB数据库学习笔记
+MongoDB学习笔记
 
 ##### 简介
 
@@ -85,9 +85,27 @@ NoSQL主要有一下几种：
 
 ##### nodeJs中连接MongoDB
 
+需要安装mongodb包，
 
+```javascript
+const { MongoClient } = require('mongodb')
 
-##### 案例
+const client = new MongoClient('mongodb://127.0.0.1:27017')
+
+async function run() {
+  try{
+    await client.connect()
+    const db = client.db('abc')
+    const collectionName = db.collection('name')
+    const ret = await collectionName.find()
+    console.log(await ret.toArray())
+  } catch(err) {
+    console.log('连接失败',err)
+  }
+}
+
+run()
+```
 
 
 
