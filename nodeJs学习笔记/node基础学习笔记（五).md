@@ -149,4 +149,115 @@ express中应用程序可以使用以下类型的中间件：
   - express.text()解析Content-Type为text/plain格式的请求体
   - express.static()托管静态资源
 
-  
+##### 原理实现
+
+接下来实现一个简易的express
+
+```javascript
+//app.js
+const express = require('./express')
+
+const app = express()
+
+app.get('/',(req,res) => {
+    res.end('get /')
+})
+
+app.get('/foo',(req,res) => {
+    res.end('get /foo')
+})
+
+app.listen(3001, () => {
+    console.log('listen at 3001')
+})
+```
+
+新建`express/index.js`
+
+```javascript
+module.exports = require('./lib/express')
+```
+
+新建`express/lib/express.js`
+
+```javascript
+const http = require('http')
+const url = require('url')
+const routes = []
+
+function createApplication() {
+    return {
+        get(path,handler) {
+            routes.push({
+                path,
+                method:'get',
+                handler
+            })
+        },
+        listen(...args) {
+            const server = http.createServer((req,res) => {
+                const {pathname} = url.parse(req.url)
+                const method = req.method.toLowerCase()
+                const route = routes.find(route => route.path === pathname && route.method === method)
+                if(route){
+                    return route.handler(req,res)
+                }
+                res.end('404')
+            })
+            server.listen(...args)
+        }
+    }
+}
+
+module.exports = createApplication
+```
+
+启动`node app.js`即可实现简易的路由功能
+
+然而这种方式直接在createApplication中返回一个对象，扩展性很差，可以添加一个application模块，将对应的方法添加到对象上：
+
+新建`application.js`
+
+```javascript
+const http = require('http')
+const url = require('url')
+const routes = []
+
+function App(){}
+
+App.prototype.get = function (path,handler) {
+    routes.push({
+        path,
+        method:'get',
+        handler
+    })
+},
+
+App.prototype.listen = function(...args) {
+    const server = http.createServer((req,res) => {
+        const {pathname} = url.parse(req.url)
+        const method = req.method.toLowerCase()
+        const route = routes.find(route => route.path === pathname && route.method === method)
+        if(route){
+            return route.handler(req,res)
+        }
+        res.end('404')
+    })
+    server.listen(...args)
+}
+
+module.exports = App
+```
+
+```javascript
+//express.js
+const App = require("./application")
+
+function createApplication() {
+   return new App()
+}
+
+module.exports = createApplication
+```
+
+运行`node  app.js`即可
