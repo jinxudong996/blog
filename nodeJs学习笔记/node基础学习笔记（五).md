@@ -261,4 +261,3 @@ module.exports = createApplication
 ```
 
 运行`node  app.js`即可
-

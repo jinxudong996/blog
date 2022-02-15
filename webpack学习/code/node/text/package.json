@@ -1,5 +1,5 @@
 {
-  "name": "koaText",
+  "name": "text",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -10,8 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@koa/router": "^10.1.1",
-    "koa": "^2.13.4",
-    "largeadd": "^1.0.0"
+    "large-number": "^1.0.1",
+    "largeadd": "^1.0.1"
   }
 }
