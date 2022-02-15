@@ -11,6 +11,6 @@
   "license": "ISC",
   "dependencies": {
     "large-number": "^1.0.1",
-    "largeadd": "^1.0.1"
+    "largeadd": "^1.0.3"
   }
 }

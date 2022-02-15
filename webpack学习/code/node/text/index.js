@@ -1,3 +1,3 @@
 let largeNumber = require('largeadd')
-console.log(largeNumber.largeadd)
-// console.log(largeNumber('123','321'))
+
+console.log(largeNumber.largeadd('123','321'))

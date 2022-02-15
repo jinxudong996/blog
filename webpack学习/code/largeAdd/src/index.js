@@ -1,4 +1,4 @@
-export default function add(a, b){
+module.exports = function add(a, b){
     let i = a.length -1;
     let j = b.length -1;
 
@@ -25,7 +25,7 @@ export default function add(a, b){
             carry = 1
             sum -=10
         }else{
-            carry = 10
+            carry = 0
         }
 
         ret = sum + ret
@@ -37,5 +37,3 @@ export default function add(a, b){
 
     return ret
 }
-
-console.log(add('999','1'))

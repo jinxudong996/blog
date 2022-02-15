@@ -1,6 +1,6 @@
 {
   "name": "largeadd",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "description": "大整数加法",
   "main": "index.js",
   "scripts": {
