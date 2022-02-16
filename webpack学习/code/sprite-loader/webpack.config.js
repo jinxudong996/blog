@@ -1,17 +1,13 @@
-// const path = require('path')
+const path = require('path')
+const Myplugin = require('./plugins/my-plugins')
 
-// module.exports = {
-//     entry:'./loaders/sprite-loader.js',
-//     output:{
-//         path:path.join(__dirname,'dist'),
-//         filename:'sprite-loader.js'
-//     },
-//     module:{
-//         rules:[
-//             {
-//                 text:/\.js$/,
-//                 use:path.resolve(./loaders/sprite-loader.js)
-//             }
-//         ]
-//     }
-// }
+module.exports = {
+    entry:'./src/index.js',
+    output:{
+        path:path.join(__dirname,'dist-plugin'),
+        filename:'index.js'
+    },
+    plugins:[new Myplugin({
+        name:'nick'
+    })]
+}

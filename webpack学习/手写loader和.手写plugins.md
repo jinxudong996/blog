@@ -154,4 +154,64 @@ Spritesmith.run({src: sprites}, function handleResult (err, result) {
 
   Spritesmith的第一个参数需要合成图片的路径，首先要做的就是拼接待合成图片的路径数组，首先拿到loader参数，即`background:url()`，放到imgs数组中，接下来遍历数组，拿到url中的参数拼接成绝对路径，即matchedImgs数组。接下来就开始使用Spritesmith.run函数合成图片，并将合成图片写到`dist/sprite.jpg`文件里，同时替换loader参数为新的合成图片。
 
+  [代码地址](https://github.com/jinxudong996/blog/tree/main/webpack%E5%AD%A6%E4%B9%A0/code/sprite-loader)
+
 #### plugins
+
+插件没有向loader那样独立的运行环境，只能在webpack中运行。
+
+其基本结构为
+
+```javascript
+class MyPlugin{
+	apply(compiler){
+		compiler.hooks.done.tap('MyPlugin',() => {
+			,,,
+		})
+	}
+}
+module.exports = MyPlugin
+```
+
+使用时就比较简单了，
+
+```
+plugins:[new MyPlugin]
+```
+
+接下来写一个简易的插件，首先新建`my-plugins.js`文件
+
+```javascript
+module.exports = class  Myplugin {
+    constructor(options){
+        this.options = options
+    }
+    apply(compiler){
+        console.log('插件执行了')
+        console.log(this.options)
+    }
+}
+```
+
+随后新建`webpack.config.js`
+
+```javascript
+const path = require('path')
+const Myplugin = require('./plugins/my-plugins')
+
+module.exports = {
+    entry:'./src/index.js',
+    output:{
+        path:path.join(__dirname,'dist-plugin'),
+        filename:'index.js'
+    },
+    plugins:[new Myplugin({
+        name:'nick'
+    })]
+}
+```
+
+运行打包命令，即可看见在命令行的输出。
+
+[代码地址](https://github.com/jinxudong996/blog/tree/main/webpack%E5%AD%A6%E4%B9%A0/code/sprite-loader)
+
