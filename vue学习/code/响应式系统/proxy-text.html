@@ -1,0 +1,41 @@
+<body></body>
+<script>
+
+const bucket = new Set()
+
+// 原始数据
+const data = { text: 'hello world' }
+// 对原始数据的代理
+const obj = new Proxy(data, {
+  // 拦截读取操作
+  get(target, key) {
+    if(activeEffect){
+      bucket.add(activeEffect)
+    }
+    // 返回属性值
+    return target[key]
+  },
+  // 拦截设置操作
+  set(target, key, newVal) {
+    // 设置属性值
+    target[key] = newVal
+    bucket.forEach(fn => fn())
+  }
+})
+
+let activeEffect
+function effect(fn) {
+  activeEffect = fn
+  fn()
+}
+
+effect(() => {
+  console.log('effect run')
+  document.body.innerText = obj.text
+})
+
+setTimeout(() => {
+  obj.ok = 'hello vue3'
+}, 1000)
+
+</script>
