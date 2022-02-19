@@ -235,8 +235,6 @@ p.then( resolve => {
 //成功。。。
 ```
 
-
-
 ##### then方法的链式调用
 
 实现then方法的链式调用，首先需要在then方法中返回一个promise对象，随后再判断是普通值还是promise对象，如果是普通值，直接将值传递给新promise对象的resolve方法即可，如果是promise对象，就需要判断promise对象的状态，如果是成功就需要将值传递给resolve方法，失败的话传递给reject方法。
@@ -272,22 +270,36 @@ function resolvePromise (x, resolve, reject) {
 }
 ```
 
-
-
-##### 捕获错误
-
-
-
 ##### promise.all实现
 
+promise.all()用来解决异步并发问题的，允许我们以异步调用的顺序来得到异步执行的结果。该方法属于静态方法，接受一个数组作为参数，返回结果也是一个数组，数组中的内容就是根据函数调用顺序排列的。
 
+```javascript
+static all (array) {
+    let result = [];
+    let index = 0;
+    return new MyPromise((resolve, reject) => {
+      function addData (key, value) {
+        result[key] = value;
+        index++;
+        if (index === array.length) {
+          resolve(result);
+        }
+      }
+      for (let i = 0; i < array.length; i++) {
+        let current = array[i];
+        if (current instanceof MyPromise) {
+          // promise 对象
+          current.then(value => addData(i, value), reason => reject(reason))
+        }else {
+          // 普通值
+          addData(i, array[i]);
+        }
+      }
+    })
+  }
+```
 
-##### promise.resolve实现
+因为形式使用promise.all后续都是接的then方法，所以在内部就返回一个promise对象。在对象中申明了一个addDate方法，用来按照参数列表的顺序来排列函数执行的结果。在函数内部有一个判断，每次向result数组塞一个值就+1，直到该值与参数列表相等，表明所有的函数均已经执行完毕，再讲result抛给then。
 
-
-
-##### finally实现
-
-
-
-##### catch实现
+代码地址
