@@ -300,6 +300,6 @@ static all (array) {
   }
 ```
 
-因为形式使用promise.all后续都是接的then方法，所以在内部就返回一个promise对象。在对象中申明了一个addDate方法，用来按照参数列表的顺序来排列函数执行的结果。在函数内部有一个判断，每次向result数组塞一个值就+1，直到该值与参数列表相等，表明所有的函数均已经执行完毕，再讲result抛给then。
+因为使用promise.all后续都是接的then方法，所以在内部就返回一个promise对象。在对象中申明了一个addDate方法，用来按照参数列表的顺序来排列函数执行的结果。在函数内部有一个判断，每次向result数组塞一个值就+1，直到该值与参数列表相等，表明所有的函数均已经执行完毕，再讲result抛给then。
 
-代码地址
+[代码地址](https://github.com/jinxudong996/blog/blob/main/JavaScript%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/code/promise/promise.js)
