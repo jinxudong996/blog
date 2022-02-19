@@ -110,3 +110,86 @@ export default class VueRouter {
 ```
 
 这里首先判断了当前插件是否被安装，用一个变量记录，如果被安装了就不在走后续流程；随后将install函数中传入的vue实例记录到全局，后续需要用到实例上的很多方法；最后将创建Vue实例时传入的router对象挂载到Vue实例，这里借用了混入方法，在beforeCreate()钩子函数里做一下判断，只给vue实例去挂载，而组件就不需要了。
+
+接着编写下类的构造器：
+
+```javascript
+constructor(options){
+    this.options = options
+    this.routeMap = {}
+    // observable
+    this.data = _Vue.observable({
+        current:"/"
+    })
+    this.init()
+}
+```
+
+该构造器挂在了三个属性到路由实例上，options就是传入的route数组，包含路由和组件，routeMap就是路由与对应组件的依赖，而data是由_Vue.observable创建的响应式对象，里面的current代表当前路由。
+
+紧接着解析下传入的options，将对应的路由和组件存入routeMap
+
+```javascript
+createRouteMap(){
+    //遍历所有的路由规则 吧路由规则解析成键值对的形式存储到routeMap中
+    this.options.routes.forEach(route => {
+        this.routeMap[route.path] = route.component
+    });
+}
+```
+
+接下来就开始编写route-link组件和route-view组件
+
+```javascript
+initComponent(Vue){
+    Vue.component("router-link",{
+        props:{
+            to:String
+        },
+        render(h){
+            return h("a",{
+                attrs:{
+                    href:this.to
+                },
+                on:{
+                    click:this.clickhander
+                }
+            },[this.$slots.default])
+        },
+        methods:{
+            clickhander(e){
+                history.pushState({},"",this.to)
+                this.$router.data.current=this.to
+                e.preventDefault()
+            }
+        }
+        // template:"<a :href='to'><slot></slot><>"
+    })
+    const self = this
+    Vue.component("router-view",{
+        render(h){
+            // self.data.current
+            const cm=self.routeMap[self.data.current]
+            return h(cm)
+        }
+    })
+}
+```
+
+编写组件时使用render函数，render函数接受一个函数作为参数，根据该函数来渲染成虚拟dom。该函数接受三个参数，第一个创建元素的选择器；第二个设置元素的属性，这里通过attrs设置了元素的href属性和通过on绑定了的click事件；第三个设置元素的内容，这里是获取了默认插槽的内容。
+
+在最后监听了popstate事件，根据前言，点击浏览器的前进和后退就会触发该函数，在回调中设置了data中的current，由于data是响应式数据，一旦更改就会重新更新视图。
+
+```javascript
+initEvent(){
+    //
+    window.addEventListener("popstate",()=>{
+        this.data.current = window.location.pathname
+    })
+}
+```
+
+[代码地址](https://github.com/jinxudong996/blog/tree/main/vue%E5%AD%A6%E4%B9%A0/code/vue-router/route)
+
+吐槽下typeora，记得写完保存了，上传掘金时发现只有一半，找都找不回来，大半夜的重新写。。。
+
