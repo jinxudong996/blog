@@ -435,3 +435,5 @@ class Watcher {
 
 可以看到我们的差值表达式、双向绑定功能皆以完善。
 
+[代码地址](https://github.com/jinxudong996/blog/tree/main/vue%E5%AD%A6%E4%B9%A0/code/vue2.0%E5%93%8D%E5%BA%94%E5%BC%8F%E7%B3%BB%E7%BB%9F)
+
