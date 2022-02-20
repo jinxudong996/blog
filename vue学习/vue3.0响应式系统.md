@@ -1,6 +1,6 @@
 响应式系统学习笔记
 
-#### 前言
+##### 前言
 
 vue3是采用Proxy来实现响应式数据的，之前写过一篇[博客](https://juejin.cn/post/7031371164911943711)总结过Proxy知识点，接下来回顾下：
 
@@ -123,7 +123,7 @@ setTimeout(() => {
 
 对响应式系统做了些优化，设置一个全局变量来存储操作函数，而effect也改成了接受一个函数，这样不管操作函数是什么名称，都不影响我们的响应式系统。
 
-还有一个问题，如果我们在定时器中设置一个obj中不存在的属性，`obj.text1 = 'hello vue3`，会发现页面数据依然会更改，这就有问题了，响应式系统愿意是监控原始数据，而为原始数据添加属性也会触发我们的操作函数，这就有问题了。这里我们没有将操作函数与目标字段对应，无论操作哪个属性，都会执行一个操作函数。接下来需要将操作函数与目标字段一一对应起来。
+还有一个问题，如果我们在定时器中设置一个obj中不存在的属性，`obj.text1 = 'hello vue3`，会发现页面数据依然会更改，这就有问题了，响应式系统原本是监控原始数据，而为原始数据添加属性也会触发我们的操作函数，这就有问题了。这里我们没有将操作函数与目标字段对应，无论操作哪个属性，都会执行一个操作函数。接下来需要将操作函数与目标字段一一对应起来。
 
 用一个树状结构来将目标字段与操作函数对应起来
 
@@ -390,11 +390,7 @@ setTimeout(() => {
 </script>
 ```
 
-不太懂，明早继续看看
-
-
-
-
+ 
 
 ##### 嵌套的effect与effect栈
 
@@ -426,19 +422,179 @@ effects && effects.forEach(effectFn => {
 
 ##### 调度执行
 
+接调度就是指当trigger动作触发操作函数重新执行时，有能力决定函数执行的时机、次数以及方式。
 
+比如如下代码：
 
+```javascript
+const data = {foo:1}
+const obj = new Proxy(data,{...})
 
+effect(() => {
+	console.log(obj.foo)
+})
 
-##### 计算属性与lazy
+obj.foo++
+consle.log("结束了。。。")
+```
 
+这段代码打印结果为：
 
+```
+1
+2
+结束了。。。
+```
 
+我们希望更改下打印的顺序，将顺序调整为:
 
+```
+1
+结束了。。。
+2
+```
 
-##### watch实现原理
+就需要使用调度器，在定义effect函数时添加一个options参数，将该参数挂载到对应的操作函数上
 
+```javascript
+function effect(fn,options ={}){
+	const effectFn = () => {
+		...
+	}
+	effectFn.options = options
+}
+```
 
+接下来在trigger函数中调用操作函数时先判断是否存在调度器，如果存在调度器就先执行调度器：
+
+```javascript
+function trigger(target,key){
+	...
+	effectsToRun.forEach(effectFn =>{
+		if(effectFn.options.scheduler){
+			effectFn.options.scheduler(effectFn)
+		}else{
+			effectFn()
+		}
+	})
+}
+```
+
+于是在定义操作函数时，传入对应的调度函数：
+
+```javascript
+const data = {foo:1}
+const obj = new Proxy(data,{...})
+
+effect(() => {
+	console.log(obj.foo)
+}，{
+    scheduler(fn){
+        setTimeout(fn)
+    }
+})
+
+obj.foo++
+consle.log("结束了。。。")
+```
+
+传入的调度函数就是将操作函数放到宏任务队列中，就能完成我们预期的打印任务。
+
+##### 计算属性
+
+目前的effect函数都是会立即执行的，现在我们不想要他立即执行，希望在需要的时候执行，这样更改下代码：
+
+```javascript
+function effect(fn,options ={}){
+	const effectFn = () => {
+		...
+	}
+	...
+    if(!options.lazy){
+        effectFn()
+    }
+    return  effectFn()
+}
+```
+
+```javascript
+const effectFn =  effect(() => {
+	console.log(obj.foo)
+}，{
+    lazy：true
+})
+effectFn()
+```
+
+在定义调度函数时传一个lazy字段，这样在执行操作函数时对options做一个判断，如果lazy为true，就直接返回操作函数，来手动执行我们的操作函数。
+
+接下来我们可以据此来实现一个计算属性的函数：
+
+```javascript
+function computed(getter) {
+  const effectFn = effect(getter, {
+    lazy: true,
+  })
+  
+  const obj = {
+    get value() {
+      return effectFn()
+    }
+  }
+
+  return obj
+}
+```
+
+定义了一个computed函数，该函数接受一个getter函数做参数，用getter函数来当操作函数。computed函数返回一个对象，该对象的vaule属性是一个访问器属性，只有访问value属性时，才会执行effectFn函数，并将结果返回。
+
+验证一下：
+
+```javascript
+const data = {foo:1,bar:2}
+const obj = new Proxy(data,{...})
+
+const sumRes =  computed(() => {obj.foo + obj.bat})
+console.log(sumRes.value) //3
+```
+
+这里向computed里传入一个函数，返回结果就是一个包含value的对象，这个value就是一个访问器属性，只有访问该属性时才会执行。
+
+这里只是实现了懒计算，当访问sumRes.value才会进行计算求值，并没有做到缓存，多次访问就会多次求值，这里需要添加一个缓存的功能。
+
+```javascript
+function computed(getter) {
+  let value
+  let dirty = true
+
+  const effectFn = effect(getter, {
+    lazy: true,
+    scheduler() {
+      if (!dirty) {
+        dirty = true
+        trigger(obj, 'value')
+      }
+    }
+  })
+  
+  const obj = {
+    get value() {
+      if (dirty) {
+        value = effectFn()
+        dirty = false
+      }
+      track(obj, 'value')
+      return value
+    }
+  }
+
+  return obj
+}
+```
+
+为effect添加scheduler调度函数，在getter函数中所依赖的响应式数据发生改变时执行，这样就会重置dirty，避免多次修改同样的数据无法生效。在访问器属性中就对dirty进行判断，只有dirty为true时才会对调用我们的操作函数。
+
+[代码地址]()
 
 
 
