@@ -1,5 +1,3 @@
-响应式系统学习笔记
-
 ##### 前言
 
 vue3是采用Proxy来实现响应式数据的，之前写过一篇[博客](https://juejin.cn/post/7031371164911943711)总结过Proxy知识点，接下来回顾下：
@@ -594,7 +592,7 @@ function computed(getter) {
 
 为effect添加scheduler调度函数，在getter函数中所依赖的响应式数据发生改变时执行，这样就会重置dirty，避免多次修改同样的数据无法生效。在访问器属性中就对dirty进行判断，只有dirty为true时才会对调用我们的操作函数。
 
-[代码地址]()
+[代码地址](https://github.com/jinxudong996/blog/blob/main/vue%E5%AD%A6%E4%B9%A0/code/%E5%93%8D%E5%BA%94%E5%BC%8F%E7%B3%BB%E7%BB%9F/index.html)
 
 
 
