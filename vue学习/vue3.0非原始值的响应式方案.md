@@ -117,9 +117,96 @@ Reflect是一个全局对象，主要有以下功能：
 
 ##### 代理数组
 
+首先理解下vue2.0是如歌监听数组的变化的呢，defineProperty是根本监听不到数组的变化的：
+
+```javascript
+obj = {
+    age:[1,2,3],
+    name:'nick'
+}
+
+Object.defineProperty(obj,'age',{
+    get(val){
+        console.log('1111',val)
+        return val
+    }
+})
 
 
+console.log(obj.age)
+```
 
+这里根本打印不到get里面的内容，想要实现对数组的监听，得重写数组的方法。更改数组自身内容的有七个方法： push 、pop 、shift 、unshift 、splice 、sort 和reverse ，接下来对着七个方法进行重写：
+
+```javascript
+// 让 arrExtend 先继承 Array 本身的所有属性
+const arrExtend = Object.create(Array.prototype)
+const arrMethods = [
+  'push',
+  'pop',
+  'shift',
+  'unshift',
+  'splice',
+  'sort',
+  'reverse'
+]
+/**
+ * arrExtend 作为一个拦截对象, 对其中的方法进行重写
+ */
+arrMethods.forEach(method => {
+  const oldMethod = Array.prototype[method]
+  const newMethod = function(...args) {
+    oldMethod.apply(this, args)
+    console.log(`${method}方法被执行了`)
+  }
+  arrExtend[method] = newMethod
+})
+
+export default {
+  arrExtend
+}
+```
+
+这里利用 Object.create将Array原型到arrExtend变量上，接下来遍历该原型，首先拿到原型上的方法，随后对其重写，在重写的新方法中利用apply再去调用老方法，这样既不更改原逻辑，又能实现对数组方法的监听。
+
+验证一下：
+
+```javascript
+const {arrExtend} = require('./copyArr')
+
+let arr = [0,1,2,3,4] 
+
+if (Array.isArray(arr)) {
+    arr.__proto__ = arrExtend
+    arr.push(5)
+ }
+
+ console.log(arr)
+```
+
+实际上在vue2.0中创建响应式数据是在 observer中的，在 observer中加入上述代码即可实现对数组的监听。
+
+接来下使用proxy实现对数组的监听：
+
+```javascript
+
+let p = new Proxy(arr,{
+    get(val,index){
+        console.log('监听到了数组的改变')
+        return val[index]
+    },
+    set(target, property, value, receiver){
+        console.log('监听到了数组的改变...')
+        target[property] = value
+    }
+})
+
+console.log(p[0]) 
+//监听到了数组的改变
+//0
+```
+
+完全能实现我们想要的效果，
 
 ##### 代理Set和Map
 
