@@ -202,7 +202,7 @@ teleport是vue3新添加的一个默认组件，详细请看[文档](https://v3.
 
 打开浏览器就可以看到我们的dialog已经和#app平级。
 
-
+[代码地址](https://github.com/jinxudong996/blog/tree/main/ts%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/code/project/vue3-basic)
 
 
 
