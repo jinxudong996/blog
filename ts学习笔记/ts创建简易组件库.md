@@ -2,7 +2,7 @@ vue3+TS搭建一个自己的组件库。
 
 #### 前置
 
-首先下载vue-cli，搭建我们的环境，`vue-create-luckyUi`，选择vue3和tescript。在src目录下创建`package`作为组件目录。再安装`bootstrap`，用bootstrap里面的样式来完成我们的组件。
+首先下载vue-cli，搭建我们的环境，`vue-create-luckyUi`，选择vue3和TypeScript 。在src目录下创建`package`作为组件目录。再安装`bootstrap`，用bootstrap里面的样式来完成我们的组件。
 
 #### 组件编写
 
@@ -282,7 +282,7 @@ export default defineComponent({
 
 这里核心的地方有两点：
 
-- 自定义组件实现v-model，vue2中自定义组件实现v-mdel必须要绑定一个`value`属性和`input事件`，在input事件中将输入的值传递给`value`。在vue3中就需要绑定一个`modelValue`和`update:modelValue`
+- 自定义组件实现v-model，vue2中自定义组件实现v-mdel必须要绑定一个`value`属性和`input事件`，在input事件中将输入的值传递给`value`。在vue3中就需要绑定一个`modelValue`和`update:modelValue事件`
 - 还有就是父子组件之间的传值问题，因为有插槽，没办法使用常规的属性传值，这里使用的事件传值采用了一个第三方库[mitt](https://github.com/developit/mitt)。在父组件中通过`emitter.on('form-item-created', callback)`来注册事件，在子组件中通过`emitter.emit('form-item-created', validateInput)`触发事件。
 
 #### 验证
