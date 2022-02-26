@@ -362,3 +362,6 @@ app.mount('#app')
 ```
 
 运行`npm run lib`即可在dist目录下查看。
+
+[代码地址](https://github.com/jinxudong996/blog/tree/main/ts%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/code/project/lucky-ui)
+
