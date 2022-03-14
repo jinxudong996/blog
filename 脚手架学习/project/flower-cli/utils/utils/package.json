@@ -1,0 +1,26 @@
+{
+  "name": "@flower-cli/utils",
+  "version": "0.0.0",
+  "description": "> TODO: description",
+  "author": "jinxudong <18751241086@163.com>",
+  "homepage": "https://github.com/jinxudong996/blog#readme",
+  "license": "ISC",
+  "main": "lib/utils.js",
+  "directories": {
+    "lib": "lib",
+    "test": "__tests__"
+  },
+  "files": [
+    "lib"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jinxudong996/blog.git"
+  },
+  "scripts": {
+    "test": "echo \"Error: run tests from root\" && exit 1"
+  },
+  "bugs": {
+    "url": "https://github.com/jinxudong996/blog/issues"
+  }
+}

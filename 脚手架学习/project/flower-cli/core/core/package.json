@@ -1,0 +1,38 @@
+{
+  "name": "@flower-cli/core",
+  "version": "0.0.1",
+  "description": "> TODO: description",
+  "author": "jinxudong <18751241086@163.com>",
+  "homepage": "https://github.com/jinxudong996/blog#readme",
+  "license": "ISC",
+  "main": "lib/index.js",
+  "directories": {
+    "@flower-cli/log": "file:../../utils/log",
+    "lib": "lib",
+    "test": "__tests__",
+    "import-local": "^3.1.0"
+  },
+  "files": [
+    "lib"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jinxudong996/blog.git"
+  },
+  "scripts": {
+    "test": "echo \"Error: run tests from root\" && exit 1"
+  },
+  "bugs": {
+    "url": "https://github.com/jinxudong996/blog/issues"
+  },
+  "dependencies": {
+    "@flower-cli/log": "^0.0.1",
+    "colors": "^1.4.0",
+    "import-local": "^3.1.0",
+    "npmlog": "^6.0.1",
+    "path-exists": "^5.0.0",
+    "root-check": "^2.0.0",
+    "semver": "^7.3.5",
+    "user-home": "^3.0.0"
+  }
+}

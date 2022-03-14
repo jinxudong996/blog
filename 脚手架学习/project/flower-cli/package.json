@@ -1,0 +1,22 @@
+{
+  "name": "flower-cli",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "bin": "./core/core/bin/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "lerna": "^4.0.0"
+  },
+  "dependencies": {
+    "dotenv": "^16.0.0",
+    "import-local": "^3.1.0",
+    "minimist": "^1.2.5",
+    "npmlog": "^6.0.1"
+  }
+}
