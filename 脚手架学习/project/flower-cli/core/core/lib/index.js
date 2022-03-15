@@ -19,6 +19,7 @@ function core() {
     checkUserHome()
     checkInputArgs()
     checkEnv()
+    checkGlobalUpdate()
   } catch (e) {
     log.error(e)
   }
@@ -70,9 +71,18 @@ function checkArgs() {
 function checkEnv() {
   const dotenv = require('dotenv')
   const dotenvPath = path.resolve(userHome,'.env')
-  console.log(dotenvPath)
   config = dotenv.config({
     path:dotenvPath
   })
   log.verbose('环境变量',config,process.env.name)
+}
+
+async function checkGlobalUpdate(){
+  const {getNpmSemverVersion} = require('@flower-cli/get-npm-info')
+  const currentVersion = pkg.version
+  const npmName = pkg.name
+  const lastVersions = await getNpmSemverVersion(currentVersion,npmName)
+  if(lastVersions && semver.gt(lastVersions,currentVersion)){
+    log.warn(color.yellow(`请手动更新${npmName}，当前版本：${currentVersion}，最新版本：${lastVersions}`))
+  }
 }

@@ -1,6 +1,6 @@
 {
-  "name": "flower-cli",
-  "version": "1.0.0",
+  "name": "@imooc-cli",
+  "version": "1.0.5",
   "description": "",
   "main": "index.js",
   "bin": "./core/core/bin/index.js",
