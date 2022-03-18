@@ -6,23 +6,31 @@ const userHome = require('user-home')
 const path = require('path')
 const fs = require('fs');
 const semver = require('semver')
+const commander = require('commander')
 const color = require('colors/safe')
+
 const pkg = require('../../../package.json')
 const log = require('@flower-cli/log')
-let args,config
+const init = require('@flower-cli/init')
+
+let args, config
+
+const program = new commander.Command()
 
 function core() {
-  try {
+  // try {
     checkVersion()
     checkNodeVersion()
     // checkRoot()
     checkUserHome()
-    checkInputArgs()
+    // checkInputArgs()
     checkEnv()
     checkGlobalUpdate()
-  } catch (e) {
-    log.error(e)
-  }
+
+    registerCommand()
+  // } catch (e) {
+  //   log.error(e)
+  // }
 
 }
 
@@ -70,19 +78,54 @@ function checkArgs() {
 
 function checkEnv() {
   const dotenv = require('dotenv')
-  const dotenvPath = path.resolve(userHome,'.env')
+  const dotenvPath = path.resolve(userHome, '.env')
   config = dotenv.config({
-    path:dotenvPath
+    path: dotenvPath
   })
-  log.verbose('环境变量',config,process.env.name)
+  log.verbose('环境变量', config, process.env.name)
 }
 
-async function checkGlobalUpdate(){
-  const {getNpmSemverVersion} = require('@flower-cli/get-npm-info')
+async function checkGlobalUpdate() {
+  const { getNpmSemverVersion } = require('@flower-cli/get-npm-info')
   const currentVersion = pkg.version
   const npmName = pkg.name
-  const lastVersions = await getNpmSemverVersion(currentVersion,npmName)
-  if(lastVersions && semver.gt(lastVersions,currentVersion)){
+  const lastVersions = await getNpmSemverVersion(currentVersion, npmName)
+  if (lastVersions && semver.gt(lastVersions, currentVersion)) {
     log.warn(color.yellow(`请手动更新${npmName}，当前版本：${currentVersion}，最新版本：${lastVersions}`))
   }
+}
+
+function registerCommand() {
+  program
+    .name('flower-cli')
+    .usage('<command> [options]')
+    .version(pkg.version)
+    .option('-d, --debug', '是否开启调试模式', false)
+
+  program
+    .command('init [projectName]')
+    .option('-f,--force','是否强制初始化项目')
+    .action(init)
+
+  program.on('option:debug', function () {
+    if(program._optionValues.debug){
+      process.env.LOG_LEVEL = 'verbose'
+    }else{
+      process.env.LOG_LEVEL = 'info'
+    }
+    log.level = process.env.LOG_LEVEL
+  })
+  program.on('command:*',function(obj){
+    const avalibleCommands = program.commands.map(cmd => cmd.name())
+    console.log(color.red('未知的命令：' + obj[0]));
+    if(avalibleCommands.length > 0){
+      console.log(color.red('可用命令' + avalibleCommands.join('.')))
+    }
+  })
+
+  if(process.argv.length < 3){
+    program.outputHelp()
+    console.log()
+  }
+  program.parse(process.argv)
 }
