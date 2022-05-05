@@ -1,10 +1,14 @@
-let ab = require('lodash ')
+function n(){
+  name:'nick'
+}
 
-let b = {}
-let a = {a1:b, a2:b}
 
-console.log(a.a1 === a.a2) //true
+n.prototype.color = 'red'
 
-let c = ab.cloneDeep(a)
-
-console.log(c.a1 === c.a2) //false
+let n1 = new n()
+n.prototype = {
+  age:18
+}
+console.log(n1)
+console.log(n1.age)
+console.log(n1.color)
