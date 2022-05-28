@@ -18,22 +18,133 @@
 
 ##### 异常监控
 
-异常监控包括JavaScript语法错误，资源加载错误，接口异常，我们挨个来介绍。
+异常监控包括JavaScript语法错误，资源加载错误，**接口异常**，我们挨个来介绍。
 
-首先熟悉一个事件，[GlobalEventHandlers.onerror](https://developer.mozilla.org/zh-CN/docs/Web/API/GlobalEventHandlers/onerror)，详细可以查看MDN。
+所有的错误可以归类为以下七种：
+
+- SyntaxError 语法错误，是代码解析时发生的错误，比如：
+
+  ```javascript
+  let a = 
+  //"Uncaught SyntaxError: Unexpected end of input"
+  ```
+
+- TypeError 类型错误，是变量或者参数不是预期类型时发生的错误，比如
+
+  ```javascript
+  let a = 12;
+  a.concat(9)
+  ```
+
+- RangeError 范围错误是一个值超出范围是发生的错误，比如设置数组长度为负值
+
+  ```javascript
+  new Array(-1)
+  ```
+
+- ReferenceError  引用错误，是引用一个不存在的变量时发生的错误
+
+  ```javascript
+  console.log(a)
+  ```
+
+- EvalError eval错误，是eval函数没有被正确执行时抛出的错误，不过现在这个错误已经不再使用了，通常都会抛出TypeError 类型
+
+  ```javascript
+  eval = () => {}
+  new eval()
+  ```
+
+- RUIError URI错误，是在调用decodeRUI、encodeURI、decodeURIComponent这类浏览器提供方法时发生的错误
+
+  ```javascript
+  decodeURIComponent('%')
+  ```
+
+- Failed to load resource 资源加载错误，是指img、input等标签加载资源时报错了
+
+上述错误都可以被一个事件对象所监控，[GlobalEventHandlers.onerror](https://developer.mozilla.org/zh-CN/docs/Web/API/GlobalEventHandlers/onerror)，详细可以查看MDN。
 
 - 当JavaScript语法运行错误时，window会触发一个ErrorEvent接口的error事件，并执行window.onerror()。
 - 当资源加载失败，加载资源的元素会触发与一个Event接口的error事件，并执行该元素上的onerror()处理函数，这些事件不会冒泡到window，会被单一的window.addEventlistener捕获。
 
+```javascript
+//js语法错误
+window.onerror = (msg, url, line, column, error,a,b) => {
+  reportData({
+      msg,
+      line,
+      column,
+      error: error.stack,
+      subType: 'js',
+      pageURL: url,
+      type: 'error',
+      startTime: performance.now(),
+  })
+}
+```
 
+```javascript
+//资源加载错误
+window.addEventListener('error', e => {
+  const target = e.target
+  if (!target) return
+
+  if (target.src || target.href) {
+      const url = target.src || target.href
+      reportData({
+          url,
+          type: 'error',
+          subType: 'resource',
+          startTime: e.timeStamp,
+          html: target.outerHTML,
+          resourceType: target.tagName,
+          paths: e.path.map(item => item.tagName).filter(Boolean),
+      })
+  }
+}, true)
+```
+
+目前上报数据就暂时先打印出来：
+
+```javascript
+function reportData(options){
+  console.log(options)
+}
+```
+
+接下来测试一下：
+
+```
+//js语法报错
+column: 15
+error: "ReferenceError: a is not defined\n    at file:///C:/Users/Thomas%E4%B8%9C/Desktop/owl/index.html:12:15"
+line: 12
+msg: "Uncaught ReferenceError: a is not defined"
+pageURL: "file:///C:/Users/Thomas%E4%B8%9C/Desktop/owl/index.html"
+startTime: 42.5
+subType: "js"
+type: "error"
+
+//资源加载报错
+html: "<img src=\"a.png\" alt=\"\">"
+paths: (3) ['IMG', 'BODY', 'HTML']
+resourceType: "IMG"
+startTime: 45
+subType: "resource"
+type: "error"
+url: "file:///C:/Users/Thomas%E4%B8%9C/Desktop/owl/a.png"
+```
 
 
 
 ##### 性能监控
 
+性能监控一半都通过浏览器的performance对象来获取常规的新能指标，关于performance可以从[MDN](https://developer.mozilla.org/zh-CN/docs/Web/API/Performance)来简单的了解一下这个对象：
 
+>  **`Performance`** 接口可以获取到当前页面中与性能相关的信息。它是 High Resolution Time API 的一部分，同时也融合了 Performance Timeline API、[Navigation Timing API](https://developer.mozilla.org/en-US/docs/Web/API/Navigation_timing_API)、 [User Timing API](https://developer.mozilla.org/en-US/docs/Web/API/User_Timing_API) 和 [Resource Timing API](https://developer.mozilla.org/en-US/docs/Web/API/Resource_Timing_API)。 
 
-
+这个对象上有着很多的属性和方法，接下来列举一些常用的
 
 ##### 数据埋点
 
