@@ -144,7 +144,11 @@ url: "file:///C:/Users/Thomas%E4%B8%9C/Desktop/owl/a.png"
 
 >  **`Performance`** 接口可以获取到当前页面中与性能相关的信息。它是 High Resolution Time API 的一部分，同时也融合了 Performance Timeline API、[Navigation Timing API](https://developer.mozilla.org/en-US/docs/Web/API/Navigation_timing_API)、 [User Timing API](https://developer.mozilla.org/en-US/docs/Web/API/User_Timing_API) 和 [Resource Timing API](https://developer.mozilla.org/en-US/docs/Web/API/Resource_Timing_API)。 
 
-这个对象上有着很多的属性和方法，接下来列举一些常用的
+这个
+
+这个对象上有着很多的属性和方法，接下来列举一些常用的值：
+
+
 
 ##### 数据埋点
 
