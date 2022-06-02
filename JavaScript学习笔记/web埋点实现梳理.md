@@ -205,17 +205,93 @@ url: "file:///C:/Users/Thomas%E4%B8%9C/Desktop/owl/a.png"
 - version  当前项目的版本
 - ua，userAgent，浏览器默认获取相关IP、型号、操作系统等
 
+
+
 ###### 平均在线时长
 
-用户平均在线也是一个很有价值的
+
+
+用户平均在线也是一个很有价值的，这里是计算方法是：每次用户点击与下一次点击之间的时间做累加。每间隔5秒钟连续打点，超过15s就当做已经离线。这个后续还得继续优化。
+
+```javascript
+function averageOnlineTime (){
+  //每5s打点
+  //15分钟不点击  就认为离线
+  let OFFLINE_MILL = 15*1000
+  let SEND_MILL = 5*1000
+  let lastTime = Date.now()
+
+  window.addEventListener('click',() => {
+    let now = Date.now()
+    let duration = now - lastTime
+    let onlineFlag = false
+
+    if(duration > OFFLINE_MILL){
+      //已经离线
+      lastTime = Date.now()
+      onlineFlag = true
+      console.log('已经离线')
+    }else if(duration > SEND_MILL){
+      //5s连续打点
+      lastTime = Date.now()
+
+    }
+    let durationData = {
+      times:lastTime,
+      flag:onlineFlag
+    }
+    reportData(durationData)
+  },false)
+
+}
+```
 
 
 
+###### 页面停留时间
+
+ 利用 addEventListener() 监听 popstate、hashchange 页面跳转事件。需要注意的是调用history.pushState()`或`history.replaceState()不会触发popstate事件。只有在做出浏览器动作时，才会触发该事件，如用户点击浏览器的回退按钮（或者在Javascript代码中调用history.back()或者history.forward()方法）。同理，hashchange也一样。
 
 
-##### 数据埋点
+
+###### PV、PU
+
+PV(page view) 是页面浏览量，UV(Unique visitor)用户访问量。PV 只要访问一次页面就算一次，UV 同一天内多次访问只算一次。
+
+对于前端来说，只要每次进入页面上报一次 PV 就行，UV 的统计放在服务端来做，主要是分析上报的数据来统计得出 UV。
 
 
+
+##### 数据上报
+
+常规的数据上报有三种方式：
+
+- sendBeacon
+
+  navigator.sendBeacon()可用于通过HTTP POST将少量数据异步传输到服务器。详细可见[MDN](https://developer.mozilla.org/zh-CN/docs/Web/API/Navigator/sendBeacon)。
+
+  navigator.sendBeacon(url, data)，data参数就是要发送的数据，常见的类型有ArrayBuffer、ArrauBufferView、Blob、DomString、FormData等。
+
+  这个方法主要用于满足统计和诊断代码的需要，兼容性较好（除了ie，主流的浏览器都支持），支持跨域，唯一缺点是支持传输的数据量较小。如何根据浏览器动态设置传输数据大小，这个得后续研究下他的最大数据值。
+
+- XMLHttpRequest
+
+  XMLHttpRequest（XHR）对象用于与服务器交互。通过 XMLHttpRequest 可以在不刷新页面的情况下请求特定 URL，获取数据。最常见的应用就是AJAX。然后这种方式他有一个弊端：当我们用ajax发送异步数据时，如果页面已经被卸载了，会导致发送失败的；如果我们用同步发送请求，他是会阻塞后续文档加载，有很大的性能问题，所以在页面卸载后发送请求，navigator.sendBeacon()相比XMLHttpRequest，前者是更好地选择。
+
+- image
+
+  image 方式是通过将采集的数据拼接在图片请求的后面，向服务端请求一个 1*1 px 大小的图片实现的，设置它的 src 属性就可以发送数据。这种方式简单且天然可跨域，又兼容所有浏览器，没有阻塞问题，是目前比较受欢迎的前端数据上报方式。但由于是 get 请求，对上报的数据量有一定的限制，一般为 2~8 kb。
+
+  ```
+  var img = new Image();
+  img.width = 1;
+  img.height = 1;
+  img.src = '/sa.gif?project=default&data=xxx'
+  ```
+
+  但是这种方式也有一定的弊端，当关闭页面时，由于这种方式也是异步的，存在关闭页面时发送数据效果较差。
+
+##### 埋点
 
 
 
@@ -234,120 +310,6 @@ url: "file:///C:/Users/Thomas%E4%B8%9C/Desktop/owl/a.png"
 
 
 
-
-##### 性能指标
-
-chrome提出了一个以用户为中心的性能指标，以用户为中心的性能指标是了解和改善您的网站体验的一大重要工具，这些指标将使真实用户受益。 详细查看[文档](https://web.dev/metrics/)
-
-###### FP
-
- FP(first-paint)，从页面加载开始到第一个像素绘制到屏幕上的时间，实际上也可以理解为白屏时间。
-
-```javascript
-const entryHandler = (list) => {        
-    for (const entry of list.getEntries()) {
-        if (entry.name === 'first-paint') {
-            observer.disconnect()
-        }
-
-       console.log(entry)
-    }
-}
-
-const observer = new PerformanceObserver(entryHandler)
-// buffered 属性表示是否观察缓存数据，也就是说观察代码添加时机比事情触发时机晚也没关系。
-observer.observe({ type: 'paint', buffered: true })
-```
-
-打印的数据中心的startTime就是我们要的绘制白屏时间。
-
-###### FCP
-
-FCP(first-contentful-paint)，从页面加载开始到页面内容的任何部分在屏幕上完成渲染的时间 
-
-```javascript
-const entryHandler = (list) => {        
-    for (const entry of list.getEntries()) {
-        if (entry.name === 'first-contentful-paint') {
-            observer.disconnect()
-        }
-        
-        console.log(entry)
-    }
-}
-
-const observer = new PerformanceObserver(entryHandler)
-observer.observe({ type: 'paint', buffered: true })
-```
-
-###### LCP
-
-LCP(largest-contentful-paint)，从页面加载开始到最大文本块或图像元素在屏幕上完成渲染的时间。LCP 指标会根据页面[首次开始加载](https://w3c.github.io/hr-time/#timeorigin-attribute)的时间点来报告可视区域内可见的最大[图像或文本块](https://web.dev/lcp/#what-elements-are-considered)完成渲染的相对时间。 
-
-```javascript
-const entryHandler = (list) => {
-    if (observer) {
-        observer.disconnect()
-    }
-
-    for (const entry of list.getEntries()) {
-        console.log(entry)
-    }
-}
-
-const observer = new PerformanceObserver(entryHandler)
-observer.observe({ type: 'largest-contentful-paint', buffered: true })
-```
-
-FCP 和 LCP 的区别是：FCP 只要任意内容绘制完成就触发，LCP 是最大内容渲染完成时触发。 
-
-###### CLS
-
-CLS(layout-shift)，从页面加载开始和其[生命周期状态](https://developers.google.com/web/updates/2018/07/page-lifecycle-api)变为隐藏期间发生的所有意外布局偏移的累积分数。 
-
-
-
-###### 首屏渲染时间
-
-大多数的情况下，首屏渲染时间可以通过load事件来获取，当纯HTML被完全加载以及解析时，DOMContentLoaded事件会被触发，不用去等待css、img、iframe加载完。当整个页面及其所有的依赖被加载完时，将会触发load事件。
-
-
-
-
-
-
-
-###### TTFB
-
-首字节时间 (TTFB) 是衡量实验室和现场连接设置时间和 Web 服务器响应能力的基本指标。它有助于识别 Web 服务器何时响应请求太慢。在导航请求（即对 HTML 文档的请求）的情况下，它优先于所有其他有意义的加载性能指标 
-
-
-
-###### FCP
-
-
-
-###### LCP
-
-
-
-###### FID
-
-
-
-###### TTI
-
-
-
-###### TBT
-
-
-
-###### CLS
-
-
-
-###### INP
 
 
 
