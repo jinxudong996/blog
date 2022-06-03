@@ -60,3 +60,53 @@ module.exports = bar;
 ```
 
 ##### 常用插件
+
+-  CommonJS 插件
+
+  虽然rollup.js默认支持esm格式的模块化，有了该插件就能够在项目中导入commonjs格式的模块。
+
+  安装 @rollup/plugin-commonjs 插件，在rollup.config.js中配置插件即可，
+
+  ```javascript
+  import commonjs from '@rollup/plugin-commonjs'
+  
+  export default {
+    input: 'src/bar.js',
+    output: {
+      file: 'dist/bundle.js',
+      format: 'cjs'
+    },
+    plugins: [
+      commonjs()
+    ],
+  };
+  ```
+
+  
+
+- babel插件
+
+  这个插件比较常见了，将我们高版本的js转译成低版本的js。
+
+  ```javascript
+  npm install @rollup/plugin-babel
+  npm install @babel/core
+  npm install @babel/preset-env
+  ```
+
+  ```javascript
+  import babel  from '@rollup/plugin-babel'
+  
+  export default {
+    input: 'src/bar.js',
+    output: {
+      file: 'dist/bundle.js',
+      format: 'cjs'
+    },
+    plugins: [
+      babel({
+        presets: ['@babel/preset-env']
+      })
+    ],
+  };
+  ```
