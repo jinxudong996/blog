@@ -69,7 +69,13 @@ store.subscribe(() => {
 
 
 
+##### react+redux
 
+上面为了了解redux，流程图画的较为的简单，接下来再重新介绍下redux工作流程
+
+
+
+接下来使用react来重构上述的计数器
 
 
 
