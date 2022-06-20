@@ -308,3 +308,103 @@ root.render(
 ```
 
 定义action时接受参数
+
+```javascript
+const reducer = (state = initialState, action) => {
+  switch(action.type) {
+    case INCREMENT:
+      return {
+        count: state.count + action.payload
+      }
+    case DECREMENT:
+      return {
+        count: state.count - action.payload
+      }
+    default: 
+      return state;
+  }
+}
+```
+
+[代码地址](https://github.com/jinxudong996/blog/tree/main/react%E5%AD%A6%E4%B9%A0/redux/redux-count)
+
+##### 中间件开发
+
+###### 概念
+
+中间件本质就是一个函数，允许我们来扩展redux程序，很大的扩展了我们对action的扩展能力。当我们增加了中间件以后，组件触发了action，首先执行中间件函数，当中间件处理完成后，才会执行reducer。
+
+加入了中间件的redux，其工作流程是这样的
+
+
+
+
+
+###### 案例
+
+现在在点击按钮加减时需要延时1s才会数值才会改变，首先编写一个中间件：
+
+```javascript
+//  middleware/thunk.js
+const thunkMd =  ({dispatch}) => next => action => {
+  if(action.type === 'increment' || action.type === 'decrement'){
+    setTimeout(() => {
+      next(action)
+    },1000)
+  }
+  // next(action)
+}
+
+export default thunkMd
+```
+
+然后注册这个中间件
+
+```javascript
+// store/index.js
+import thunk from './middleware/thunk'
+
+export const store = createStore(Reducer,applyMiddleware(thunk))
+```
+
+功能已经出现了，然而这个中间件不够灵活，我们想实现一个延时中间件，不仅仅只有这个计数器案例可以使用，要足够的抽象，可以根据传入的参数来判断，如果传入的那参数是函数，就执行我们的函数，在函数中执行异步操作；不然就正常往后执行：
+
+```javascript
+const thunkMd =  ({dispatch}) => next => action => {
+  // 1. 当前这个中间件函数不关心你想执行什么样的异步操作 只关心你执行的是不是异步操作
+  // 2. 如果你执行的是异步操作 你在触发action的时候 给我传递一个函数 如果执行的是同步操作 就传递action对象
+  // 3. 异步操作代码要写在你传递进来的函数中
+  // 4. 当前这个中间件函数在调用你传递进来的函数时 要将dispatch方法传递过去
+  if (typeof action === 'function') {
+    return action(dispatch)
+  }
+  next(action)
+}
+
+export default thunkMd
+```
+
+定义异步action
+
+```javascript
+export const increment_async = payload => dispatch => {
+  setTimeout(() => {
+    dispatch(increment(payload))
+  },1000)
+}
+```
+
+然后触发action时
+
+```javascript
+function Counter({count,increment,decrement,increment_async}){
+  return (
+    <div>
+      <button onClick={ () => increment_async(5)}>+</button>
+      <span>{count}</span>
+      <button onClick={() => decrement(5)}>-</button>
+    </div>
+  )
+}
+```
+
