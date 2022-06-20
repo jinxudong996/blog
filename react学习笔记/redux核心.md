@@ -151,19 +151,133 @@ root.render(
   - 可以获取store中的状态，将状态通过组件的props属性映射给组件
   - 可以获取dispatch方法
 
+接下来是代码编写：
+
+```javascript
+//index.js
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+// import App from './App';
+
+import {createStore} from 'redux';
+import { Provider } from 'react-redux';
+
+import Counter from './components/Counter.js'
+
+const initialState = {
+  count:0
+}
+
+function reducer(state = initialState,action){
+  switch (action.type) {
+    case 'increment':
+      return {count: state.count + 1};
+    case 'decrement':
+      return {count: state.count - 1}
+    default:
+      return state;
+  }
+}
+
+const store = createStore(reducer)
 
 
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <Provider store={store}>
+   <Counter/>
+</Provider>
+);
+```
 
+```javascript
+// /components/Counter.js
+import React from "react";
+import {connect} from 'react-redux'
 
+const increment = {type:'increment'}
+const decrement = {type:'decrement'}
 
+function Counter({count,increment,decrement}){
+  return (
+    <div>
+      <button onClick={increment}>+</button>
+      <span>{count}</span>
+      <button onClick={decrement}>-</button>
+    </div>
+  )
+}
 
+const mapStateToProps = state => ({
+  count:state.count
+})
 
+const mapDispatchToProps = dispatch => ({
+  increment() {
+    dispatch(increment)
+  },
+  decrement() {
+    dispatch(decrement)
+  }
+})
 
+// connect  第一个参数  就是state仓库  组件中的属性可以通过props.state拿到state
+//          第二个参数  是一个函数 返回一个对象  该对象的属性都可以通过props拿到
+export default connect(mapStateToProps,mapDispatchToProps)(Counter)
+```
 
+首先通过函数`createStore`创建一个store实例，参数就是reducer函数，用以更改state仓库；然后用Provider组件包裹我们的组件，这样我们的业务组件就可以拿到store实例；在组件中定义了一个`Counter`函数组件，返回时用被传入connect返回函数，connect函数有两个参数，第一个是我们的state仓库，第二个就是action，用以更改state仓库。在react中使用redux流程就如上述，虽然目前有点繁琐，那是因为代码少，一旦项目复杂起来，redux状态共享就会变得非常的有用。
 
+稍微复杂一点的项目，都会将store单独拆分成一个模块出来，而不是都写在index.js中，接下来在优化一下代码：
 
+```javascript
+// src/store/actions/counter.actions.js
+import { INCREMENT, DECREMENT } from "../const/counter.const";
 
+export const increment = payload => ({type: INCREMENT});
+export const decrement = payload => ({type: DECREMENT});
 
+```
+
+```javascript
+// src/store/const/counter.const.js
+export const INCREMENT = 'increment';
+export const DECREMENT = 'decrement';
+```
+
+```javascript
+// src/store/reducer/counter.reducer.js
+import { INCREMENT, DECREMENT } from "../const/counter.const";
+
+const initialState = {
+  count: 0
+}
+
+const reducer = (state = initialState, action) => {
+  switch(action.type) {
+    case INCREMENT:
+      return {
+        count: state.count + 1
+      }
+    case DECREMENT:
+      return {
+        count: state.count - 1
+      }
+    default: 
+      return state;
+  }
+}
+
+export default reducer
+```
+
+```javascript
+//// src/store/index.js
+import { createStore } from "redux";
+import Reducer from './reducers/counter.reducer'
+
+export const store = createStore(Reducer)
+```
 
 
 

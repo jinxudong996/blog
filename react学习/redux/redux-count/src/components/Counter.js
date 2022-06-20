@@ -1,15 +1,15 @@
 import React from "react";
 import {connect} from 'react-redux'
 
-const increment = {type:'increment'}
-const decrement = {type:'decrement'}
+import { bindActionCreators } from 'redux';
+import * as couterActions from '../store/actions/counter.actions';
 
-function Counter({count,dispatch}){
+function Counter({count,increment,decrement}){
   return (
     <div>
-      <button onClick={() => dispatch(increment)}>+</button>
+      <button onClick={increment}>+</button>
       <span>{count}</span>
-      <button onClick={() => dispatch(decrement)}>-</button>
+      <button onClick={decrement}>-</button>
     </div>
   )
 }
@@ -19,5 +19,8 @@ const mapStateToProps = state => ({
 })
 
 
+// connect  第一个参数  就是state仓库  组件中的属性可以通过props.state拿到state
+//          第二个参数  是一个函数 返回一个对象  该对象的属性都可以通过props拿到
+const mapDispatchToProps = dispatch => bindActionCreators(couterActions, dispatch)
 
-export default connect(mapStateToProps)(Counter)
+export default connect(mapStateToProps, mapDispatchToProps)(Counter);
