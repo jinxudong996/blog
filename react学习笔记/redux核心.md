@@ -234,8 +234,8 @@ export default connect(mapStateToProps,mapDispatchToProps)(Counter)
 // src/store/actions/counter.actions.js
 import { INCREMENT, DECREMENT } from "../const/counter.const";
 
-export const increment = payload => ({type: INCREMENT});
-export const decrement = payload => ({type: DECREMENT});
+export const increment = () => ({type: INCREMENT});
+export const decrement = () => ({type: DECREMENT});
 
 ```
 
@@ -279,9 +279,32 @@ import Reducer from './reducers/counter.reducer'
 export const store = createStore(Reducer)
 ```
 
+这样我们的根目录下的`index.js`就会非常的简洁了：
 
+```javascript
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+// import App from './App';
 
+import { Provider } from 'react-redux';
 
+import Counter from './components/Counter.js'
+import { store } from './store'; 
 
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <Provider store={store}>
+   <Counter/>
+</Provider>
+);
+```
 
+实际上action也可以传参的：
 
+在action中传入参数
+
+```javascript
+<button onClick={ () => increment(5)}>+</button>
+```
+
+定义action时接受参数
