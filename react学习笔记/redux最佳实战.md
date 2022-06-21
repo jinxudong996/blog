@@ -508,5 +508,3 @@ function Counter({count,increment,decrement,increment_async}){
 
 
 
-
-
