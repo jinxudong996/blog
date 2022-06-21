@@ -336,7 +336,7 @@ const reducer = (state = initialState, action) => {
 
 加入了中间件的redux，其工作流程是这样的
 
-
+![](https://github.com/jinxudong996/blog/blob/main/images/redux-middleware.png?raw=true)
 
 
 
@@ -407,4 +407,106 @@ function Counter({count,increment,decrement,increment_async}){
   )
 }
 ```
+
+###### 常用的中间件
+
+- redux-thnk
+
+  这个中间件和上述编写的中间件完全一样的，用法也很简单，和上述完全类似，首先`npm install  redux-thunk`
+
+  ```javascript
+  import {applyMiddleware} from 'redux'
+  createStore(rootReducer,applyMiddleware(thunk))
+  ```
+
+  ```javascript
+  const loadPosts = () => async dispatch => {
+  	const posts = await axios,get('api').then(res => res.data)
+  	dispatch({type:LOADPOSTS,payload:posts})
+  }
+  ```
+
+  
+
+- redux-saga
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
