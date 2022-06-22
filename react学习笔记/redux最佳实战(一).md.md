@@ -1,4 +1,4 @@
-##### redux核心
+##### redux核心知识
 
 ###### 简介
 
@@ -12,6 +12,8 @@ redux主要有四个核心概念
 - View  视图，html页面
 - Action 对象，描述对状态进行怎样的操作
 - Reducers 函数，操作并返回新的状态
+
+###### 案例
 
 接下来通过redux实现一个简单的计数器，加深对redux的认识：
 
@@ -326,8 +328,6 @@ const reducer = (state = initialState, action) => {
 }
 ```
 
-[代码地址](https://github.com/jinxudong996/blog/tree/main/react%E5%AD%A6%E4%B9%A0/redux/redux-count)
-
 ##### 中间件开发
 
 ###### 概念
@@ -430,9 +430,66 @@ function Counter({count,increment,decrement,increment_async}){
 
 - redux-saga
 
+  redux-saga和redux -thunk一样，都是在redux工作流程中添加异步代码 ，redux-saga更加强大，它允许将异步操作从Action Creator文件中抽离出来，放在一个单独的文件中。
 
+  首先安装下这个插件npm install redux-saga
 
+  ```javascript
+  // store/index.js
+  import createSagaMidddleware from 'redux-saga';
+  import counterSaga from './sagas/counter.saga'
+  
+  // 创建 sagaMiddleware
+  const sagaMiddleware = createSagaMidddleware();
+  
+  export const store = createStore(Reducer, applyMiddleware(sagaMiddleware));
+  
+  sagaMiddleware.run(counterSaga)
+  ```
 
+  ```javascript
+  //src/sagas/counter.saga.js
+  import { takeEvery, put, delay } from 'redux-saga/effects';
+  import { increment } from '../actions/counter.actions';
+  import { INCREMENT_ASYNC } from '../const/counter.const';
+  
+  // takeEvery 接收 action
+  // put 触发 action
+  
+  function* increment_async_fn (action) {
+    yield delay(2000);
+    yield put(increment(action.payload))
+  }
+  
+  export default function* counterSaga () {
+    // 接收action
+    yield takeEvery(INCREMENT_ASYNC, increment_async_fn)
+  }
+  ```
+
+  ```javascript
+  export const INCREMENT_ASYNC = 'increment_async';
+  ```
+
+  触发actions
+
+  ```javascript
+  function Counter({count,increment,decrement,increment_async}){
+    return (
+      <div>
+        <button onClick={ () => increment_async(5)}>+</button>
+        <span>{count}</span>
+        <button onClick={() => decrement(5)}>-</button>
+      </div>
+    )
+  }
+  ```
+
+  
+
+第一篇基础总结，后面写一个购物车的案例，在研究下源码手写一个redux。加油。
+
+[代码地址](https://github.com/jinxudong996/blog/tree/main/react%E5%AD%A6%E4%B9%A0/redux/redux-count)
 
 
 

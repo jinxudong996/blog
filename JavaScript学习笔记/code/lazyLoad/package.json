@@ -1,0 +1,16 @@
+{
+  "name": "lazyLoad",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@rollup/plugin-commonjs": "^22.0.0",
+    "rollup": "^2.75.7"
+  }
+}
