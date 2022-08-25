@@ -203,6 +203,90 @@ type res = {
 
 
 
+##### 递归复用
+
+递归就是将问题分解为相似的一系列小问题，通过函数调用自身来解决这些问题，直到满足结束条件。TypeScript类型系统不支持循环，当处理数量的个数、长度、层级不确定时，就可以通过递归来处理。
+
+###### 数组类型
+
+反转一个数组，比如` type arr = [1,2,3,4,5]; `，可以这样写：
+
+```javascript
+type ReverseArr<Arr extends unknown[]> = 
+    Arr extends [infer First, ...infer Rest] 
+        ? [...ReverseArr<Rest>, First] 
+        : Arr; 
+
+type ReverseArrResult = ReverseArr<[1,2,3,4,5]> //[5.4.3.2.1]
+```
+
+也可以用于查找元素，比如在一个数组` type arr = [1,2,3,4,5]; `中查找等于5，有就返回true，没有就返回false。
+
+```javascript
+type Includes<Arr extends unknown[], FindItem> = 
+    Arr extends [infer First, ...infer Rest]
+        ? IsEqual<First, FindItem> extends true
+            ? true
+            : Includes<Rest, FindItem>
+        : false;
+
+type IsEqual<A, B> = (A extends B ? true : false) & (B extends A ? true : false);
+type IncludesResult = Includes<[1,2,3,4,5],5> //true
+```
+
+删除指定元素：
+
+```javascript
+type RemoveItem<
+    Arr extends unknown[], 
+    Item, 
+    Result extends unknown[] = []
+> = Arr extends [infer First, ...infer Rest]
+        ? IsEqual<First, Item> extends true
+            ? RemoveItem<Rest, Item, Result>
+            : RemoveItem<Rest, Item, [...Result, First]>
+        : Result;
+        
+type IsEqual<A, B> = (A extends B ? true : false) & (B extends A ? true : false);
+```
+
+###### 字符串类型
+
+字符串替换：
+
+```javascript
+type ReplaceAll<
+    Str extends string, 
+    From extends string, 
+    To extends string
+> = Str extends `${infer Left}${From}${infer Right}`
+        ? `${Left}${To}${ReplaceAll<Right, From, To>}`
+        : Str;
+```
+
+字符串反转：
+
+```javascript
+type ReverseStr<
+    Str extends string, 
+    Result extends string = ''
+> = Str extends `${infer First}${infer Rest}` 
+    ? ReverseStr<Rest, `${First}${Result}`> 
+    : Result;
+```
+
+###### 对象类型
+
+
+
+
+
+
+
+###### 函数类型
+
+
+
 
 
 
