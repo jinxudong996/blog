@@ -1,8 +1,10 @@
+
+
+// console.dir(Vue)
 let _Vue = null
 export default class VueRouter {
     static install(Vue){
         //1 判断当前插件是否被安装
-        debugger
         if(VueRouter.install.installed){
             return;
         }
@@ -10,17 +12,18 @@ export default class VueRouter {
         //2 把Vue的构造函数记录在全局
         _Vue = Vue
         //3 把创建Vue的实例传入的router对象注入到Vue实例
+        // _Vue.prototype.$router = this.$options.router
         _Vue.mixin({
             beforeCreate(){
                 if(this.$options.router){
                     _Vue.prototype.$router = this.$options.router
-                }   
+                    
+                }
+               
             }
         })
     }
-
     constructor(options){
-        debugger
         this.options = options
         this.routeMap = {}
         // observable
@@ -28,21 +31,19 @@ export default class VueRouter {
             current:"/"
         })
         this.init()
-    }
 
+    }
     init(){
         this.createRouteMap()
         this.initComponent(_Vue)
         this.initEvent()
     }
-
     createRouteMap(){
         //遍历所有的路由规则 吧路由规则解析成键值对的形式存储到routeMap中
         this.options.routes.forEach(route => {
             this.routeMap[route.path] = route.component
         });
     }
-
     initComponent(Vue){
         Vue.component("router-link",{
             props:{
@@ -75,8 +76,8 @@ export default class VueRouter {
                 return h(cm)
             }
         })
+        
     }
-
     initEvent(){
         //
         window.addEventListener("popstate",()=>{

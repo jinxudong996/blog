@@ -1,0 +1,2 @@
+"use strict";(self["webpackChunkroute_study"]=self["webpackChunkroute_study"]||[]).push([[23],{23:function(s,t,u){u.r(t),u.d(t,{default:function(){return d}});var e=function(){var s=this,t=s._self._c;return t("div",{staticClass:"about"},[t("span",[s._v("当前路由id："+s._s(s.$route.params.id))]),t("h2",[s._v(s._s(s.id))]),t("h1",[s._v("This is Detail")])])},i=[],n={props:["id"],name:"Detail"},a=n,r=u(1001),l=(0,r.Z)(a,e,i,!1,null,null,null),d=l.exports}}]);
+//# sourceMappingURL=23.945d6a81.js.map

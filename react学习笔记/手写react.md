@@ -268,17 +268,25 @@ export default function createElement(type, props, ...children) {
 
 ```
 
+这里先介绍下reduce方法的使用：
 
+>  **`reduce()`** 方法对数组中的每个元素按序执行一个由您提供的 **reducer** 函数，每一次运行 **reducer** 会将先前元素的计算结果作为参数传入，最后将其结果汇总为单个返回值。 
 
+> reduce接受两个参数，第一个是一个回调函数，第二个是一个初始值，回调函数中接受四个参数，分别是积累值、当前值、当前下标、当前数组。 
+>
+> 比如我们利用reduce查找数组的最大值：
+>
+> ```javascript
+> [3, 5, 4, 3, 6, 2, 3, 4].reduce((a, i) => Math.max(a, i), -Infinity);
+> ```
+>
+> 数组求和：
+>
+> ```javascript
+> [3, 5, 4, 3, 6, 2, 3, 4].reduce((a, i) => a + i);
+> ```
 
-
-
-
-
-
-
-
-
+这里首先对传入的children通过concat()做了一个拷贝，再调用reduce方法对其中的虚拟dom进行处理，这里的result就是reduce函数返回的初始值，reduce的第二个参数将其初始化为一个空数组，child就是遍历的每一个child。首先判断child如果是布尔值，就直接返回，如果是对象的话，就将其放入result，如果不是就表明是一个文本了，这里在此调用createElement("text", { textContent: child })，并将结果放入result中。
 
 
 
