@@ -161,7 +161,37 @@ const patch = init([
 
 - patchVnode
 
-  
+  代码位置：https://github.com/snabbdom/snabbdom/blob/3be76a428b4b627fb845f94534355a186bc11231/src/init.ts#L387。
+
+  这里也主要分为三个步骤，首先触发prepatch和update钩子函数；随后开始比对vnode的差异，核心代码就是这里：
+
+  ```javascript
+  if (isUndef(vnode.text)) {
+        if (isDef(oldCh) && isDef(ch)) {
+          if (oldCh !== ch) updateChildren(elm, oldCh, ch, insertedVnodeQueue);
+        } else if (isDef(ch)) {
+          if (isDef(oldVnode.text)) api.setTextContent(elm, "");
+          addVnodes(elm, null, ch, 0, ch.length - 1, insertedVnodeQueue);
+        } else if (isDef(oldCh)) {
+          removeVnodes(elm, oldCh, 0, oldCh.length - 1);
+        } else if (isDef(oldVnode.text)) {
+          api.setTextContent(elm, "");
+        }
+      } else if (oldVnode.text !== vnode.text) {
+        if (isDef(oldCh)) {
+          removeVnodes(elm, oldCh, 0, oldCh.length - 1);
+        }
+        api.setTextContent(elm, vnode.text!);
+  }
+  ```
+
+  这里先判断是否有text属性，如果有就判断两个text是否相同，如果不相同直接删除旧节点，然后直接将text更新到对应的节点上；如果没有text属性，首先判断新旧节点是否都有子节点，而且不相同，调用updateChildren方法，在这个方法中对比所有的子节点并且更新dom；如果新节点和旧节点只有一个有子节点的话，也比较简单了，直接删除旧节点的内容，插入新节点的内容。最后触发钩子函数` hook?.postpatch?.(oldVnode, vnode); `
+
+  这里在看下updateChildren方法，这个方法整个diff算法的核心。
+
+  # 休息会，待会在看
+
+
 
 - createElm
 
@@ -185,7 +215,17 @@ const patch = init([
 
 - removeVnodes 
 
-  
+  这个函数是在452行调用的：
 
+  ```javascript
+  removeVnodes(parent, [oldVnode], 0, 0);
+  ```
 
+  接受四个参数，父元素节点、要删除的vnode的数组和数组中要删除的vnode的位置。代码位置：https://github.com/snabbdom/snabbdom/blob/master/src/init.ts#L250
+
+  这里对传入的数组进行遍历，对vnode节点首先进行筛选，如果是文本节点直接调用` api.removeChild `;
+
+  如果是vnode节点，就先触发销毁的钩子函数，，再调用` createRmCb(ch.elm!, listeners) `，这个函数是一个高阶函数，钩子函数都执行完毕后调用` api.removeChild(parent, childElm); `
+
+###### 123
 
