@@ -2,7 +2,7 @@ let _Vue = null
 export default class VueRouter {
     static install(Vue){
         //1 判断当前插件是否被安装
-        debugger
+        
         if(VueRouter.install.installed){
             return;
         }
@@ -20,7 +20,7 @@ export default class VueRouter {
     }
 
     constructor(options){
-        debugger
+        
         this.options = options
         this.routeMap = {}
         // observable

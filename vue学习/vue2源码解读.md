@@ -302,23 +302,589 @@ inject: {
 
 #### vue选项合并
 
+前面只是对数据的处理，接下来才是对选项的合并。
 
+在的最后有这样几行代码
+
+```javascript
+const options: ComponentOptions = {} as any
+  let key
+  for (key in parent) {
+    mergeField(key)
+  }
+  for (key in child) {
+    if (!hasOwn(parent, key)) {
+      mergeField(key)
+    }
+  }
+  function mergeField(key: any) {
+    const strat = strats[key] || defaultStrat
+    options[key] = strat(parent[key], child[key], vm, key)
+  }
+  return options
+```
+
+这里首先有两个for循环，意思就是将parent和child里面的key都调用mergeField方法，hasOwn方法是判断属性是否自己定义的而非原型上的，这样来防止重复合并。在mergeField函数中，定义了变量strat，它的值通过strats获取的，而strats是这样定义的：` const strats = config.optionMergeStrategies `，config是一个全局的配置对象，config.optionMergeStrategies是一个合并选项的策略对象，这个对象下包含很多函数，这些函数就可以认为是合并特定选项的策略。这样不同的选项使用不同的合并策略，如果你使用自定义选项，那么你也可以自定义该选项的合并策略，只需要在 `Vue.config.optionMergeStrategies` 对象上添加与自定义选项同名的函数就行。 
+
+接下来看下有哪些合并策略。
+
+##### el和propsData的合并策略
+
+在[位置](https://github.com/vuejs/vue/blob/60d268c4261a0b9c5125f308468b31996a8145ad/src/core/util/options.ts#L27)定义了strats变量，随后就开始处理el和propsData
+
+```javascript
+if (__DEV__) {
+  strats.el = strats.propsData = function (
+    parent: any,
+    child: any,
+    vm: any,
+    key: any
+  ) {
+    if (!vm) {
+      warn(
+        `option "${key}" can only be used during instance ` +
+          'creation with the `new` keyword.'
+      )
+    }
+    return defaultStrat(parent, child)
+  }
+}
+```
+
+这里首先判断是否是测试环境，然后定义了一个函数，先判断是否有vm，这里的vm就是通过mergeField函数传递的，也就是 mergeOptions函数的第三个参数，即vue实例。在策略函数中通过判断是否存在 `vm` 就能够得知 `mergeOptions` 是在实例化时调用(使用 `new` 操作符走 `_init` 方法)还是在继承时调用(`Vue.extend`)，而子组件的实现方式就是通过实例化子类完成的，子类又是通过 `Vue.extend` 创造出来的，所以我们就能通过对 `vm` 的判断而得知是否是子组件了。 
+
+在函数中返回了defaultStrat函数，这个函数实际上也很简单
+
+```js
+const defaultStrat = function (parentVal: any, childVal: any): any {
+  return childVal === undefined
+    ? parentVal
+    : childVal
+}
+```
+
+defaultStrat 函数就如同它的名字一样，它是一个默认的策略，当一个选项不需要特殊处理的时候就使用默认的合并策略，它的逻辑很简单：只要子选项不是 `undefined` 那么就是用子选项，否则使用父选项。 
+
+##### data的合并策略
+
+在[这里](https://github.com/vuejs/vue/blob/60d268c4261a0b9c5125f308468b31996a8145ad/src/core/util/options.ts#L127)定义了data的合并函数
+
+```js
+strats.data = function (
+  parentVal: any,
+  childVal: any,
+  vm?: Component
+): Function | null {
+  if (!vm) {
+    if (childVal && typeof childVal !== 'function') {
+      __DEV__ &&
+        warn(
+          'The "data" option should be a function ' +
+            'that returns a per-instance value in component ' +
+            'definitions.',
+          vm
+        )
+
+      return parentVal
+    }
+    return mergeDataOrFn(parentVal, childVal)
+  }
+
+  return mergeDataOrFn(parentVal, childVal, vm)
+}
+```
+
+这里主要是根据判断是否有vm来执行mergeDataOrFn函数，如果有vm，表明这里处理的是通过new实例化的组件，在mergeDataOrFn函数中多传递了个vm参数。
+
+mergeDataOrFn在[这里](https://github.com/vuejs/vue/blob/60d268c4261a0b9c5125f308468b31996a8145ad/src/core/util/options.ts#L85)定义的，这里也是有一个是否vm的判断，上面就是根据是否是处理子组件来传递vm，同样这里也是根据是否传递了vm来判断是否是子组件。当没有vm即处理子组件时， 有两个if判断：如果没有子选项则使用父选项，没有父选项就直接使用子选项，且这两个选项都能保证是函数； 当父子选项同时存在，那么就返回一个函数 mergedDataFn；当有vm，即通过new操作符实例化的组件时，会直接返回 mergedInstanceDataFn 函数。 
+
+也就是说data选项最终被 mergeOptions函数处理成了一个函数 ，都会调用函数 mergeData函数，代码在[这里](https://github.com/vuejs/vue/blob/60d268c4261a0b9c5125f308468b31996a8145ad/src/core/util/options.ts#L52)。
+
+```javascript
+function mergeData(
+  to: Record<string | symbol, any>,
+  from: Record<string | symbol, any> | null
+): Record<PropertyKey, any> {
+  if (!from) return to
+  let key, toVal, fromVal
+
+  const keys = hasSymbol
+    ? (Reflect.ownKeys(from) as string[])
+    : Object.keys(from)
+
+  for (let i = 0; i < keys.length; i++) {
+    key = keys[i]
+    // in case the object is already observed...
+    if (key === '__ob__') continue
+    toVal = to[key]
+    fromVal = from[key]
+    if (!hasOwn(to, key)) {
+      set(to, key, fromVal)
+    } else if (
+      toVal !== fromVal &&
+      isPlainObject(toVal) &&
+      isPlainObject(fromVal)
+    ) {
+      mergeData(toVal, fromVal)
+    }
+  }
+  return to
+}
+```
+
+`mergeData` 函数接收两个参数 `to` 和 `from`，根据 `mergeData` 函数被调用时参数的传递顺序我们知道，`to` 对应的是 `childVal` 产生的纯对象，`from` 对应 `parentVal` 产生的纯对象 。其作用也就是*将 `from` 对象的属性混合到 `to` 对象中，也可以说是将 `parentVal` 对象的属性混合到 `childVal` 中*，最后返回的是处理后的 `childVal` 对象。 
+
+##### 生命周期钩子选择合并策略
+
+[mergeLifecycleHook](https://github.com/vuejs/vue/blob/60d268c4261a0b9c5125f308468b31996a8145ad/src/core/util/options.ts#L153) 这个函数就是用来 合并生命周期钩子的。
+
+```javascript
+export function mergeLifecycleHook(
+  parentVal: Array<Function> | null,
+  childVal: Function | Array<Function> | null
+): Array<Function> | null {
+  const res = childVal
+    ? parentVal
+      ? parentVal.concat(childVal)
+      : isArray(childVal)
+      ? childVal
+      : [childVal]
+    : parentVal
+  return res ? dedupeHooks(res) : res
+}
+
+function dedupeHooks(hooks: any) {
+  const res: Array<any> = []
+  for (let i = 0; i < hooks.length; i++) {
+    if (res.indexOf(hooks[i]) === -1) {
+      res.push(hooks[i])
+    }
+  }
+  return res
+}
+
+LIFECYCLE_HOOKS.forEach(hook => {
+  strats[hook] = mergeLifecycleHook
+})
+```
+
+上面代码最后遍历了一个 `LIFECYCLE_HOOKS`  常量，这个[常量](https://github.com/vuejs/vue/blob/60d268c426/src/shared/constants.ts)就是生命周期钩子函数组成的一个数组， 它的作用就是在 `strats` 策略对象上添加用来合并各个生命周期钩子选项的策略函数，并且这些生命周期钩子选项的策略函数相同：都是 `mergeLifecycleHook` 函数。 
+
+ 而在`mergeLifecycleHook`函数中，也比较繁琐，是一个个三元表达式组成的，对其进行下翻译：
+
+```js
+return (是否有 childVal，即判断组件的选项中是否有对应名字的生命周期钩子函数)
+  ? 如果有 childVal 则判断是否有 parentVal
+    ? 如果有 parentVal 则使用 concat 方法将二者合并为一个数组
+    : 如果没有 parentVal 则判断 childVal 是不是一个数组
+      ? 如果 childVal 是一个数组则直接返回
+      : 否则将其作为数组的元素，然后返回数组
+  : 如果没有 childVal 则直接返回 parentVal
+```
+
+接下来举几个例子：
+
+```js
+new Vue({
+  created: function () {
+    console.log('created')
+  }
+})
+```
+
+比如这样的代码会被我们转化成
+
+```js
+options.created = [
+  function () {
+    console.log('created')
+  }  
+]
+```
+
+##### 资源assets选项的合并策略
+
+ 在 `Vue` 中 `directives`、`filters` 以及 `components` 被认为是资源。处理这些资源的函数 [mergeAssets ](https://github.com/vuejs/vue/blob/60d268c4261a0b9c5125f308468b31996a8145ad/src/core/util/options.ts#L188)，
+
+```javascript
+function mergeAssets(
+  parentVal: Object | null,
+  childVal: Object | null,
+  vm: Component | null,
+  key: string
+): Object {
+  const res = Object.create(parentVal || null)
+  if (childVal) {
+    __DEV__ && assertObjectType(key, childVal, vm)
+    return extend(res, childVal)
+  } else {
+    return res
+  }
+}
+
+ASSET_TYPES.forEach(function (type) {
+  strats[type + 's'] = mergeAssets
+})
+```
+
+ 与生命周期钩子的合并处理策略基本一致 ，这个ASSET_TYPES变量里面就定义了`directives`、`filters` 以及 `components`这三个常量，只不过这个遍历再常量后面都加了个s。而在 mergeAssets函数中首先以 `parentVal` 为原型创建对象 `res`，然后判断是否有 `childVal`，如果有的话使用 `extend` 函数将 `childVal` 上的属性混合到 `res` 对象上并返回。如果没有 `childVal` 则直接返回 `res`。 
+
+其中这行代码`const res = Object.create(parentVal || null)`通过Object.create来创建res，实际上算是res继承了parentVal的原型，包裹vue上的一些内置组件，比如keepalive，这也就是我们所有的vue组件都能够使用vue的内置组件一样。
+
+##### watch的合并策略
+
+合并[watch](https://github.com/vuejs/vue/blob/60d268c4261a0b9c5125f308468b31996a8145ad/src/core/util/options.ts#L213)函数的代码是在这里：
+
+```javascript
+strats.watch = function (
+  parentVal: Record<string, any> | null,
+  childVal: Record<string, any> | null,
+  vm: Component | null,
+  key: string
+): Object | null {
+  // work around Firefox's Object.prototype.watch...
+  //@ts-expect-error work around
+  if (parentVal === nativeWatch) parentVal = undefined
+  //@ts-expect-error work around
+  if (childVal === nativeWatch) childVal = undefined
+  /* istanbul ignore if */
+  if (!childVal) return Object.create(parentVal || null)
+  if (__DEV__) {
+    assertObjectType(key, childVal, vm)
+  }
+  if (!parentVal) return childVal
+  const ret: Record<string, any> = {}
+  extend(ret, parentVal)
+  for (const key in childVal) {
+    let parent = ret[key]
+    const child = childVal[key]
+    if (parent && !isArray(parent)) {
+      parent = [parent]
+    }
+    ret[key] = parent ? parent.concat(child) : isArray(child) ? child : [child]
+  }
+  return ret
+}
+```
+
+首先定义了 `ret` 常量，最后返回的也是 `ret` 常量，所以中间的代码是在充实 `ret` 常量。之后使用 `extend` 函数将 `parentVal` 的属性混合到 `ret` 中。然后开始一个 `for in` 循环遍历 `childVal`，这个循环的目的是：检测子选项中的值是否也在父选项中，如果在的话将父子选项合并到一个数组，否则直接把子选项变成一个数组返回。 
 
 
 
 #### vue初始化
 
+在vue的构造函数中，调用了[_init](https://github.com/vuejs/vue/blob/60d268c4261a0b9c5125f308468b31996a8145ad/src/core/instance/init.ts#L17)方法
+
+```javascript
+if (options && options._isComponent) {
+      // optimize internal component instantiation
+      // since dynamic options merging is pretty slow, and none of the
+      // internal component options needs special treatment.
+      initInternalComponent(vm, options as any)
+    } else {
+      vm.$options = mergeOptions(
+        resolveConstructorOptions(vm.constructor as any),
+        options || {},
+        vm
+      )
+    }
+    /* istanbul ignore else */
+    if (__DEV__) {
+      initProxy(vm)
+    } else {
+      vm._renderProxy = vm
+    }
+```
+
+其中mergeOptions函数就是前面的vue选项合并，并且将合并后的内容存储到vm.$options上，随后的if判断，如果是测试环境的话，就调用initProxy函数。这个[函数](https://github.com/vuejs/vue/blob/60d268c4261a0b9c5125f308468b31996a8145ad/src/core/instance/proxy.ts#L84)的作用就是就是在实例对象 `vm` 上添加 `_renderProxy` 属性。 接下来仔细解读下：
+
+```js
+initProxy = function initProxy (vm) {
+    if (hasProxy) {
+        // determine which proxy handler to use
+        const options = vm.$options
+        const handlers = options.render && options.render._withStripped
+        ? getHandler
+        : hasHandler
+        vm._renderProxy = new Proxy(vm, handlers)
+    } else {
+        vm._renderProxy = vm
+    }
+}
+```
+
+该函数接受一个vm实例作为参数，函数内有一个if判断，最终都会给vm添加一个_renderProx属性。其中如果宿主环境支持proxy的话，就执行这行代码:vm._renderProxy = new Proxy(vm, handlers).如果 `Proxy` 存在，那么将会使用 `Proxy` 对 `vm` 做一层代理，代理对象赋值给 `vm._renderProxy`，所以今后对 `vm._renderProxy` 的访问，如果有代理那么就会被拦截。代理对象配置参数是 `handlers`， 其中代理函数如下：
+
+```js
+const hasHandler = {
+    has(target, key) {
+      const has = key in target
+      const isAllowed =
+        allowedGlobals(key) ||
+        (typeof key === 'string' &&
+          key.charAt(0) === '_' &&
+          !(key in target.$data))
+      if (!has && !isAllowed) {
+        if (key in target.$data) warnReservedPrefix(target, key)
+        else warnNonPresent(target, key)
+      }
+      return has || !isAllowed
+    }
+  }
+```
+
+这里的代码意思就是在开发阶段给我们一些提示警告。其中  `allowedGlobals` 函数的作用是判断给定的 `key` 是否出现在上面字符串中定义的关键字中的。 warnReservedPrefix 通过 `warn` 打印一段警告信息，警告信息提示你“在渲染的时候引用了 `key`，但是在实例对象上并没有定义 `key` 这个属性或方法 。
+
+至于会调用这个函数的原因就是：在render函数中有这样一行代码
+
+```js
+vnode = render.call(vm._renderProxy, vm.$createElement)
+```
+
+在调用render时将this指定为了vm._renderProxy。
 
 
 
+######  初始化之 initLifecycle
+
+在执行完 initProxy(vm) 后，执行了 initLifecycle(vm) 这行代码，这个[函数](https://github.com/vuejs/vue/blob/60d268c4261a0b9c5125f308468b31996a8145ad/src/core/instance/lifecycle.ts#L34)就是初始化生命周期函数的，
+
+```js
+export function initLifecycle(vm: Component) {
+  const options = vm.$options
+
+  // locate first non-abstract parent
+  let parent = options.parent
+  if (parent && !options.abstract) {
+    while (parent.$options.abstract && parent.$parent) {
+      parent = parent.$parent
+    }
+    parent.$children.push(vm)
+  }
+
+  vm.$parent = parent
+  vm.$root = parent ? parent.$root : vm
+
+  vm.$children = []
+  vm.$refs = {}
+
+  vm._provided = parent ? parent._provided : Object.create(null)
+  vm._watcher = null
+  vm._inactive = null
+  vm._directInactive = false
+  vm._isMounted = false
+  vm._isDestroyed = false
+  vm._isBeingDestroyed = false
+}
+```
+
+代码首先定义了 `vm.$options` 的引用 ，在定义了一个当前组件的父组件的实例，随后定义了一个whil循环，找到第一个非抽象组件的父组件， 并且在找到父级之后将当前实例添加到父实例的 `$children` 属性中。最后又向vm上添加了一些属性，比如常见的$children和$refs。
+
+###### initEvents和 initRender 
+
+初始化 `initLifecycle`  之后，代码执行了 [initEvents](https://github.com/vuejs/vue/blob/60d268c4261a0b9c5125f308468b31996a8145ad/src/core/instance/events.ts#L12)
+
+```js
+export function initEvents(vm: Component) {
+  vm._events = Object.create(null)
+  vm._hasHookEvent = false
+  // init parent attached events
+  const listeners = vm.$options._parentListeners
+  if (listeners) {
+    updateComponentListeners(vm, listeners)
+  }
+}
+```
+
+ 首先在 `vm` 实例对象上添加两个实例属性 `_events` 和 `_hasHookEvent`，其中 `_events` 被初始化为一个空对象，`_hasHookEvent` 的初始值为 `false` ，然后调用了`updateComponentListeners`函数。
+
+然后开始执行`initRender`函数，
+
+```js
+export function initRender (vm: Component) {
+  vm._vnode = null // the root of the child tree
+  vm._staticTrees = null // v-once cached trees
+  const options = vm.$options
+  const parentVnode = vm.$vnode = options._parentVnode // the placeholder node in parent tree
+  const renderContext = parentVnode && parentVnode.context
+  vm.$slots = resolveSlots(options._renderChildren, renderContext)
+  vm.$scopedSlots = emptyObject
+  // bind the createElement fn to this instance
+  // so that we get proper render context inside it.
+  // args order: tag, data, children, normalizationType, alwaysNormalize
+  // internal version is used by render functions compiled from templates
+  vm._c = (a, b, c, d) => createElement(vm, a, b, c, d, false)
+  // normalization is always applied for the public version, used in
+  // user-written render functions.
+  vm.$createElement = (a, b, c, d) => createElement(vm, a, b, c, d, true)
+
+  // $attrs & $listeners are exposed for easier HOC creation.
+  // they need to be reactive so that HOCs using them are always updated
+  const parentData = parentVnode && parentVnode.data
+
+  /* istanbul ignore else */
+  if (process.env.NODE_ENV !== 'production') {
+    defineReactive(vm, '$attrs', parentData && parentData.attrs || emptyObject, () => {
+      !isUpdatingChildComponent && warn(`$attrs is readonly.`, vm)
+    }, true)
+    defineReactive(vm, '$listeners', options._parentListeners || emptyObject, () => {
+      !isUpdatingChildComponent && warn(`$listeners is readonly.`, vm)
+    }, true)
+  } else {
+    defineReactive(vm, '$attrs', parentData && parentData.attrs || emptyObject, null, true)
+    defineReactive(vm, '$listeners', options._parentListeners || emptyObject, null, true)
+  }
+}
+```
+
+这里也是向vm上挂载一些属性和方法
+
+随后在代码的末尾执行了生命周期函数：
+
+```js
+callHook(vm, 'beforeCreate', undefined, false /* setContext */)
+initInjections(vm) // resolve injections before data/props
+initState(vm)
+initProvide(vm) // resolve provide after data/props
+callHook(vm, 'created')
+```
+
+就是常见的beforeCreate和created这两个钩子函数。callHook就是执行具体的钩子函数，这个函数也比较简单，就是通过const handlers = vm.$options[hook]拿到对应的数组，遍历数组执行响应的函数。
+
+此时，对生命周期钩子函数应该有了更深刻的理解： 其中 `initState` 包括了：`initProps`、`initMethods`、`initData`、`initComputed` 以及 `initWatch`。所以当 `beforeCreate` 钩子被调用时，所有与 `props`、`methods`、`data`、`computed` 以及 `watch` 相关的内容都不能使用，当然了 `inject/provide` 也是不可用的。 作为对立面，`created` 生命周期钩子则恰恰是等待 `initInjections`、`initState` 以及 `initProvide` 执行完毕之后才被调用，所以在 `created` 钩子中，是完全能够使用以上提到的内容的。但由于此时还没有任何挂载的操作，所以在 `created` 中是不能访问DOM的，即不能访问 `$el`。  
 
 
 
 #### 响应式系统
 
+在前面代码的最后执行了 `initData`  函数，这个[函数](https://github.com/vuejs/vue/blob/60d268c4261a0b9c5125f308468b31996a8145ad/src/core/instance/state.ts#L122)是很多数据初始化函数的汇总，
+
+```javascript
+function initData(vm: Component) {
+  let data: any = vm.$options.data
+  data = vm._data = isFunction(data) ? getData(data, vm) : data || {}
+  if (!isPlainObject(data)) {
+    data = {}
+    __DEV__ &&
+      warn(
+        'data functions should return an object:\n' +
+          'https://v2.vuejs.org/v2/guide/components.html#data-Must-Be-a-Function',
+        vm
+      )
+  }
+  // proxy data on instance
+  const keys = Object.keys(data)
+  const props = vm.$options.props
+  const methods = vm.$options.methods
+  let i = keys.length
+  while (i--) {
+    const key = keys[i]
+    if (__DEV__) {
+      if (methods && hasOwn(methods, key)) {
+        warn(`Method "${key}" has already been defined as a data property.`, vm)
+      }
+    }
+    if (props && hasOwn(props, key)) {
+      __DEV__ &&
+        warn(
+          `The data property "${key}" is already declared as a prop. ` +
+            `Use prop default value instead.`,
+          vm
+        )
+    } else if (!isReserved(key)) {
+      proxy(vm, `_data`, key)
+    }
+  }
+  // observe data
+  const ob = observe(data)
+  ob && ob.vmCount++
+}
+```
+
+这个首先拿到前面合并选项后得到的data，前面知道data其实是一个函数，于是下面调用getData来拿到真正的data数据，
+
+ `getData` 函数接收两个参数：第一个参数是 `data` 选项，我们知道 `data` 选项是一个函数，第二个参数是 `Vue` 实例对象。`getData` 函数的作用其实就是通过调用 `data` 函数获取真正的数据对象并返回，即：`data.call(vm, vm)`，而且我们注意到 `data.call(vm, vm)` 被包裹在 `try...catch` 语句块中，这是为了捕获 `data` 函数中可能出现的错误。同时如果有错误发生那么则返回一个空对象作为数据对象：`return {}`。 
+
+随后代码做了一些判断与校验，比如data是否是一个纯对象，data、props、methods中的字段是否重复了；随后就开始对data进行代理`proxy(vm, `_data`, key)`，这样 当我们访问 `ins.a` 时实际访问的是 `ins._data.a`。而 `ins._data` 才是真正的数据对象。
+
+最后代码执行了`const ob = observe(data)`，这个才是响应式的核心，
+
+###### obserer
+
+ 将数据对象转换成响应式数据的是 `Observer` 函数，它是一个构造函数 ，代码位置：https://github.com/vuejs/vue/blob/60d268c4261a0b9c5125f308468b31996a8145ad/src/core/observer/index.ts#L49。
+
+首先看下他的构造函数：
+
+```js
+constructor(public value: any, public shallow = false, public mock = false) {
+    // this.value = value
+    this.dep = mock ? mockDep : new Dep()
+    this.vmCount = 0
+    def(value, '__ob__', this)
+    if (isArray(value)) {
+      if (!mock) {
+        if (hasProto) {
+          /* eslint-disable no-proto */
+          ;(value as any).__proto__ = arrayMethods
+          /* eslint-enable no-proto */
+        } else {
+          for (let i = 0, l = arrayKeys.length; i < l; i++) {
+            const key = arrayKeys[i]
+            def(value, key, arrayMethods[key])
+          }
+        }
+      }
+      if (!shallow) {
+        this.observeArray(value)
+      }
+    } else {
+      /**
+       * Walk through all properties and convert them into
+       * getter/setters. This method should only be called when
+       * value type is Object.
+       */
+      const keys = Object.keys(value)
+      for (let i = 0; i < keys.length; i++) {
+        const key = keys[i]
+        defineReactive(value, key, NO_INIITIAL_VALUE, undefined, shallow, mock)
+      }
+    }
+  }
+```
+
+首先初始化了两个对象：dep为搜集依赖的一个实例；vmCount属性被设置为0。 初始化完成两个实例属性之后，使用 `def` 函数，为数据对象定义了一个 `__ob__` 属性，这个属性的值就是当前 `Observer` 实例对象。其中 `def` 函数其实就是 `Object.defineProperty` 函数的简单封装，之所以这里使用 `def` 函数定义 `__ob__` 属性是因为这样可以定义不可枚举的属性，这样后面遍历数据对象的时候就能够防止遍历到 `__ob__` 属性。 
+
+假如有这样一个数据：
+
+```js
+const data = {
+  a: 1
+}
+```
+
+那么经过 `def` 函数处理之后，`data` 对象应该变成如下这个样子：
+
+```js
+const data = {
+  a: 1,
+  // __ob__ 是不可枚举的属性
+  __ob__: {
+    value: data, // value 属性指向 data 数据对象本身，这是一个循环引用
+    dep: dep实例对象, // new Dep()
+    vmCount: 0
+  }
+}
+```
+
+随后代码区分数据是数组还是纯对象，如果是对象的话，遍历对象，为每个对象的属性调用 `defineReactive`  函数， `defineReactive` 函数的核心就是 将数据对象的数据属性转换为访问器属性，即为数据对象的属性设置一对 `getter/setter`，但其中做了很多处理边界条件的工作。 代码位置：https://github.com/vuejs/vue/blob/60d268c4261a0b9c5125f308468b31996a8145ad/src/core/observer/index.ts#L131。在`defineReactive` 函数中，都会为每个属性定义一个新的dep实例，每个属性都有自己的dep对象。然后使用 `Object.defineProperty` 函数将每个属性都转化为访问器属性，同时在get函数中调用 dep.depend() 搜集依赖；随后在set中触发依赖，首先调用const value = getter ? getter.call(obj) : val拿到上一次改动的值，与当前的值做一个对比，如果不一样再调用dep.notify()触发依赖。
 
 
 
+
+
+
+
+这个函数定义在[这里](https://github.com/vuejs/vue/blob/60d268c4261a0b9c5125f308468b31996a8145ad/src/core/observer/index.ts#L105)，
 
 
 

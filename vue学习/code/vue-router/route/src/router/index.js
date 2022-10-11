@@ -2,7 +2,7 @@ import Vue from 'vue'
 // import VueRouter from 'vue-router'
 import VueRouter from '../../vuerouter'
 import HomeView from '../views/HomeView.vue'
-debugger
+
 Vue.use(VueRouter)
 
 const routes = [
