@@ -35,7 +35,8 @@ traverse(ast, {
         }
     }
 });
-
+console.log(ast);
 const { code, map } = generate(ast);
-// console.log(generate(ast))
-console.log(code);
+console.log("##############################");
+console.log(code)
+// console.log(code);
