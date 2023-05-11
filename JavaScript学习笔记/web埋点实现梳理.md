@@ -264,11 +264,13 @@ PV(page view) 是页面浏览量，UV(Unique visitor)用户访问量。PV 只要
 
 ##### 数据上报
 
+数据上报
+
 常规的数据上报有三种方式：
 
 - sendBeacon
 
-  navigator.sendBeacon()可用于通过HTTP POST将少量数据异步传输到服务器。详细可见[MDN](https://developer.mozilla.org/zh-CN/docs/Web/API/Navigator/sendBeacon)。
+  navigator.sendBeacon()可用于通过POST将少量数据异步传输到服务器。详细可见[MDN](https://developer.mozilla.org/zh-CN/docs/Web/API/Navigator/sendBeacon)。
 
   navigator.sendBeacon(url, data)，data参数就是要发送的数据，常见的类型有ArrayBuffer、ArrauBufferView、Blob、DomString、FormData等。
 
