@@ -11,7 +11,7 @@ const isProd = process.env.NODE_ENV === 'production'
 
 let renderer
 let onReady
-if (isProd) {
+if (true) {
   const serverBundle = require('./dist/vue-ssr-server-bundle.json')
   const template = fs.readFileSync('./index.template.html', 'utf-8')
   const clientManifest = require('./dist/vue-ssr-client-manifest.json')

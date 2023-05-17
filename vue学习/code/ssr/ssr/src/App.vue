@@ -1,5 +1,6 @@
 <template>
   <div id="app">
+
     <div>这里显示message{{message}}</div>
     <div>这里显示value{{value}}</div>
     <div>
@@ -8,6 +9,20 @@
     <div>
       <button @click="onClick">点击按钮</button>
     </div>
+    <ul>
+      <li>
+        <router-link to="/">Home</router-link>
+      </li>
+      <li>
+        <router-link to="/about">About</router-link>
+      </li>
+      <li>
+        <router-link to="/posts">Posts</router-link>
+      </li>
+    </ul>
+
+    <!-- 路由出口 -->
+    <router-view/>
   </div>
 </template>
 
