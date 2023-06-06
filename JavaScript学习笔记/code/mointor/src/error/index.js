@@ -1,6 +1,6 @@
-import { report } from './report'
-import { addCache } from './addcache'
-import { getPageURL } from './utils'
+import { report } from '../report'
+import { addCache } from '../cache/cache'
+import { getPageURL } from '../util'
 
 export default function error() {
 

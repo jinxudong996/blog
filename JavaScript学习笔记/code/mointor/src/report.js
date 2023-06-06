@@ -1,9 +1,9 @@
 import { isSupportSendBeacon } from "./util"
 import config from './config'
 
-const sendBeacon = isSupportSendBeacon() ? window.navigator.sendBeacon.bind(window.navigator) : reportWithIMG
+const sendBeacon = window.navigator.sendBeacon.bind(window.navigator)
 
-export report(data){
+export function report(data) {
   const reportData = JSON.stringify({
     id: sessionID,
     appID: config.appID,
@@ -23,14 +23,14 @@ export report(data){
 
 }
 
-reportWithIMG(url,data){
-  var img = new Image();
-  img.width = 1;
-  img.height = 1;
-  let str = '?'
-  for(let item in data){
-    str += item + '=' + data[item] + '&'
-  }
-  img.src = url + str
-  console.log('准备发送', img.src)
-}
+// reportWithIMG(url, data){
+//   var img = new Image();
+//   img.width = 1;
+//   img.height = 1;
+//   let str = '?'
+//   for (let item in data) {
+//     str += item + '=' + data[item] + '&'
+//   }
+//   img.src = url + str
+//   console.log('准备发送', img.src)
+// }
