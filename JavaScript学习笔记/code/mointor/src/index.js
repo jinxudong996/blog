@@ -2,8 +2,9 @@ import { setConfig } from './config'
 import { getCache, clearCache } from './cache/cache'
 import { report } from './report'
 import error from './error/index'
-import behavior from './behavior'
+import behavior from './behavior/index'
 
+console.log(123)
 
 const mointot = {
   init(options = {}) {
@@ -22,3 +23,5 @@ const mointot = {
     })
   }
 }
+
+export default monitor
