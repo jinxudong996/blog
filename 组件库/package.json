@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "element-plus": "^2.4.1",
+    "sass": "^1.69.4",
+    "sass-loader": "^13.3.2",
+    "vue-router": "^4.0.13"
+  }
+}

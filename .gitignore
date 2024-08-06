@@ -5,3 +5,7 @@ dist/
 */.idea/
 */node_modules/
 */dist/
+.apk
+
+*/myenv/
+myenv/

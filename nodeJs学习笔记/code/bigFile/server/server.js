@@ -1,8 +1,11 @@
-const http = require("http");
-const path = require("path");
+const express = require("express");
 const fse = require("fs-extra");
 
-const server = http.createServer();
+const fs = require('fs').promises; // 确保导入了 fs.promises
+const path = require('path');
+const formidable = require('formidable');
+
+const app = express();
 const UPLOAD_DIR = path.resolve(__dirname, "..", "target");
 
 const resolvePost = req =>
@@ -16,7 +19,6 @@ const resolvePost = req =>
     });
   });
 
-// 写入文件流
 const pipeStream = (path, writeStream) =>
   new Promise(resolve => {
     const readStream = fse.createReadStream(path);
@@ -27,52 +29,76 @@ const pipeStream = (path, writeStream) =>
     readStream.pipe(writeStream);
   });
 
-// 合并切片
 const mergeFileChunk = async (filePath, filename, size) => {
   const chunkDir = path.resolve(UPLOAD_DIR, 'chunkDir' + filename);
   const chunkPaths = await fse.readdir(chunkDir);
-  // 根据切片下标进行排序
-  // 否则直接读取目录的获得的顺序会错乱
   chunkPaths.sort((a, b) => a.split("-")[1] - b.split("-")[1]);
-  // 并发写入文件
   await Promise.all(
     chunkPaths.map((chunkPath, index) =>
       pipeStream(
         path.resolve(chunkDir, chunkPath),
-        // 根据 size 在指定位置创建可写流
         fse.createWriteStream(filePath, {
           start: index * size,
         })
       )
     )
   );
-  // 合并后删除保存切片的目录
   fse.rmdirSync(chunkDir);
 };
 
-server.on("request", async (req, res) => {
+app.use(express.json());
+
+app.options("*", (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "*");
-  if (req.method === "OPTIONS") {
-    res.status = 200;
-
-    res.end();
-    return;
-  }
-
-  if (req.url === "/merge") {
-    const data = await resolvePost(req);
-    const { filename, size } = data;
-    const filePath = path.resolve(UPLOAD_DIR, `${filename}`);
-    await mergeFileChunk(filePath, filename);
-    res.end(
-      JSON.stringify({
-        code: 0,
-        message: "file merged success"
-      })
-    );
-  }
-
+  res.status(200).end();
 });
 
-server.listen(3000, () => console.log("listening port 3000"));
+app.post("/upload", async (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Headers", "*");
+  const form = new formidable.IncomingForm();
+  form.parse(req, async (err, fields, files) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: "Internal Server Error" });
+    }
+
+    const chunk = Array.isArray(files.chunk) ? files.chunk[0] : files.chunk;
+    if (!chunk) {
+      return res.status(400).json({ message: "File chunk is missing" });
+    }
+
+    const chunkPath = chunk.path;
+    const hash = Array.isArray(fields.hash) ? fields.hash[0] : fields.hash; // 检查hash是否是数组
+    const filename = fields.filename;
+    const chunkDir = path.resolve(UPLOAD_DIR, "chunkDir" + filename);
+
+    try {
+      await fs.mkdir(chunkDir, { recursive: true });
+
+      const filePath = path.resolve(chunkDir, hash); // 使用字符串类型的hash
+      await fs.rename(chunkPath, filePath);
+
+      res.json({ message: "Received file chunk" });
+    } catch (fileErr) {
+      console.error(fileErr);
+      return res.status(500).json({ message: "Error processing file chunk" });
+    }
+  });
+});
+
+app.post("/merge", async (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Headers", "*");
+  const data = await resolvePost(req);
+  const { filename, size } = data;
+  const filePath = path.resolve(UPLOAD_DIR, `${filename}`);
+  await mergeFileChunk(filePath, filename, size);
+  res.json({
+    code: 0,
+    message: "file merged success"
+  });
+});
+
+app.listen(3000, () => console.log("listening port 3000"));
