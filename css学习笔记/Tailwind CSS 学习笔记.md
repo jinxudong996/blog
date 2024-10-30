@@ -241,7 +241,67 @@ theme: {
 <div class="text-[1.8rem] font-extrabold text-custom-red bg-orange-500">设置字体大小</div>
 ```
 
+###### 伪类
 
+```vue
+<button class="border-2 bg-black text-white hover:bg-white hover:text-black">
+      按钮
+    </button>
+```
+
+当鼠标悬浮时改变背景色和字体颜色
+
+```vue
+<input
+  type="text"
+  class="px-2 outline focus:outline-2 focus:outline-sky-500"
+  placeholder="请聚焦这里..."
+/>
+```
+
+当输入框聚焦时，定义输入框轮廓线
+
+
+
+
+
+
+
+
+
+###### 伪元素
+
+
+
+###### flex
+
+
+
+
+
+###### grid
+
+
+
+
+
+###### 定位
+
+
+
+
+
+###### 动画
+
+
+
+###### 自定义指令
+
+
+
+
+
+###### 自定义函数
 
 
 
