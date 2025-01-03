@@ -1,0 +1,19 @@
+{
+  "name": "your-project-name",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Your project description",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@langchain/core": "^0.3.26",
+    "@langchain/openai": "^0.3.16",
+    "@tuesdaycrowd/sentence-transformers": "^1.0.1",
+    "dotenv": "^16.4.7",
+    "langchain": "^0.1.28",
+    "lodash": "^4.17.21",
+    "url": "^0.11.4"
+  }
+}

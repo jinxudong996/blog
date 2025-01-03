@@ -348,8 +348,6 @@ print(pm)
 
 比如
 
-。
-
 ```yaml
 _type: prompt
 input_variables:
