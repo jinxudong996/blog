@@ -1,4 +1,4 @@
-#### 安装使用
+##### 安装使用
 
  最快捷的创建 Next.js 项目的方式是使用 `create-next-app`脚手架 ，运行
 
@@ -10,7 +10,7 @@ npx create-next-app
 
 随后运行`http://localhost:3000/`就可以看到项目已经跑起来了。
 
-#### 路由
+##### 路由
 
  Next.js 有两套路由解决方案，之前的方案称之为“Pages Router”，目前的方案称之为“App Router”，两套方案目前是兼容的，都可以在 Next.js 中使用。  v13.4 起，App Router 已成为默认的路由方案 。
 
@@ -26,8 +26,6 @@ npx create-next-app
 import React from 'react'
 export default () => <h1>Hello world,this is about page</h1>
 ```
-
-
 
 
 
@@ -216,7 +214,7 @@ export default function Page() {
 
 ##### 路由处理程序
 
-路由处理程序实际上就是前后端交互的代码，就是request和response。通常定义在`route.js`里，在app目录的嵌套层级下面，不能和page.js同意层级。
+路由处理程序实际上就是前后端交互的代码，就是request和response。通常定义在`route.js`里，在app目录的嵌套层级下面，不能和page.js同一层级。
 
 比如下面的get请求
 
@@ -335,4 +333,5 @@ export function middleware(request) {
 
 
 
-#### 连接数据库
+##### 数据库
+

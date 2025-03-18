@@ -1,10 +1,8 @@
-前端要努力
-
 仿照 [vue-element-admin](https://panjiachen.github.io/vue-element-admin-site/zh/) 做一个通用版的管理后台，基于vue3和elementui涵盖国际化、权限验证、动态路由等管理后台常见的方案，还有一些管理后台常见的业务中的一些换肤、全屏和动态表格渲染等。
 
-后端服务目前依托于第三方，后续打算使用nest自己开发一套。
+http://118.31.222.50/vue-admin-pro/
 
-#### 框架搭建
+
 
 首先来完成登录页面
 
@@ -1323,13 +1321,141 @@ installDirective(app)
 
 
 
+##### CI/CD
+
+前端的 CI/CD 是指 **持续集成（Continuous Integration, CI）** 和 **持续部署（Continuous Deployment, CD）** 的缩写，是现代软件开发中一种自动化流程，旨在提高开发效率、减少人为错误并加快产品交付速度。 
+
+###### 基本感念
 
 
 
+持续集成（CI）， 开发者频繁地将代码更改合并到主分支中，并通过自动化工具运行测试（如单元测试、集成测试等），以确保新代码不会引入问题。 用以检测代码冲突和潜在问题，同时自动化构建和测试，确保代码质量。
 
+持续部署（CD）， 在 CI 的基础上，进一步将通过测试的代码自动部署到生产环境或预发布环境。 
 
+社区对于CI/CD，已经有了非常成熟的部署方案了，接下来简单的介绍下
 
+1.  **Vercel**
+   - 特点：专为现代前端框架（如 React、Next.js、Vue 等）优化。
+   - 功能：支持自动构建和部署，提供预览环境。
+   - 使用场景：静态网站或单页应用。
+2.  **Netlify**
+   - 特点：支持 Git 集成，提供持续部署功能。
+   - 功能：自动构建静态站点，支持自定义构建命令。
+   - 使用场景：静态网站、JAMstack 应用。
+3. **GitHub Pages**
+   - 特点：简单易用，免费托管静态网站。
+   - 功能：结合 GitHub Actions 实现自动化部署。
+   - 使用场景：小型项目或文档站点。
+4.  **GitHub Actions**
+   - 特点：与 GitHub 深度集成，支持自定义工作流。
 
+###### 开始部署
 
+由于我们的项目已经部署成功了，在我们的云服务器上，当然是手动的，先配置nginx代理，然后将项目的dist包放到指定的目录下面即可，想体验下CI/CD流程，首先选用的是**Vercel**
 
+首先去官网注册个账号，最好使用github账号来注册，这样可以直接导入仓库里的代码。注册完成以后，选择要部署的仓库，选择dist路径，就可以了
 
+![1742300514736](C:\Users\Thomas东\AppData\Roaming\Typora\typora-user-images\1742300514736.png)
+
+还是非常简单的，提供了预览的路径
+
+点击`Domains`，添加域名，由于 Vercel 域名绑定机制只支持标准的域名格式（如 `example.com`），而不支持直接使用 IP 地址（如 `http://118.31.222.50/vue-admin-pro/`）。Vercel 的设计初衷是托管项目到其全球 CDN 网络中，而不是将项目部署到外部服务器。要通过ip部署，可以使用nginx代理一下，但是这样就很是麻烦了，转战 GitHub Actions
+
+###### GitHub Actions 部署
+
+1. 生成SSH密钥对
+
+   运行命令
+
+   ` ssh-keygen -t rsa -b 4096 -C "your_email@example.com" `
+
+   这将生成两个文件：
+
+   - `~/.ssh/id_rsa`（私钥）
+   - `~/.ssh/id_rsa.pub`（公钥）
+
+2. 添加公钥
+
+   将公钥添加到云服务器的`~/.ssh/authorized_keys`
+
+   运行命令
+
+   ` ssh-copy-id -i ~/.ssh/id_rsa.pub your_username@118.31.222.50 `
+
+    其中 `your_username` 是你在云服务器上的用户名，`118.31.222.50` 是你的服务 ，然后输入密码即可
+
+3. 确保SSH服务允许公钥认证
+
+   - `PubkeyAuthentication yes`
+   - `AuthorizedKeysFile .ssh/authorized_keys`
+   - `PasswordAuthentication no`（可选，建议禁用密码登录以提高安全性）
+
+4. 测试SSH连接
+
+   ` ssh your_username@118.31.222.50 `  当不用输入密码就可以直接登录云服务器，说明我们的配置正确的
+
+5. 配置GitHub Secrets
+
+   进入到我们的git仓库，点击 **Settings > Secrets and variables > Actions**。
+
+   添加密钥  ` SSH_PRIVATE_KEY :。。。`
+
+6. 创建GitHub Actions 工作流文件
+
+   ```xml
+   name: Deploy Vue Admin Pro
+   
+   on:
+     push:
+       branches:
+         - main # 当推送到 main 分支时触发
+   
+   jobs:
+     build-and-deploy:
+       runs-on: ubuntu-latest
+   
+       steps:
+         - name: Checkout code
+           uses: actions/checkout@v3
+   
+         - name: Set up Node.js
+           uses: actions/setup-node@v3
+           with:
+             node-version: '16' # 使用 Node.js 16
+   
+         - name: Install dependencies
+           run: npm install
+   
+         - name: Build project
+           run: npm run build
+   
+         - name: Deploy to server
+           uses: appleboy/scp-action@master
+           with:
+             host: 118.31.222.50 # 只使用 IP 地址
+             username: root # 或者使用非 root 用户
+             key: ${{ secrets.SSH_PRIVATE_KEY }}
+             source: 'dist/' # 构建输出目录
+             target: '/var/www/vue-admin-pro/' # 服务器目标路径
+   
+         - name: Restart Nginx
+           uses: appleboy/ssh-action@master
+           with:
+             host: 118.31.222.50 # 只使用 IP 地址
+             username: root # 或者使用非 root 用户
+             key: ${{ secrets.SSH_PRIVATE_KEY }}
+             script: |
+               sudo systemctl restart nginx
+   
+   ```
+
+然后将我们常见的文件提交到github即可。
+
+正常情况下，使用vscode一般看不见`.git`开头的影藏文件，点击 File =>   Preferences  =>  setting  => 搜索File Explorer    然后将 `**/.git` 删除即可。
+
+后续我们就可以通过git仓库中的Action来查看我们的部署情况，如果有什么问题查看日志即可。
+
+![1742305438436](C:\Users\Thomas东\AppData\Roaming\Typora\typora-user-images\1742305438436.png)
+
+ 到这里我们的自动化部署已经完成了，后续我们提交代码`git push origin main`时就会自动走我们的github Action，完整自动部署。 
