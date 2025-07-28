@@ -49,7 +49,7 @@ App route还有定义了布局、模板、加载loading、错误处理和404页�
 
 布局是指多个页面共享的 UI。在导航的时候，布局会保留状态、保持可交互性并且不会重新渲染，比如用来实现后台管理系统的侧边导航栏。
 
-定义文件`app/dashboard/alyout.tsx`
+定义文件`app/dashboard/layout.tsx`
 
 ```ts
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
