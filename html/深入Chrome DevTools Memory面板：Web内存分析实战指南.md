@@ -84,7 +84,7 @@ document
 
 首先打开控制台（F12），选择Memory面板， 选择 `Heap snapshot（堆快照）`，点击底部Take snapshot 按钮， 就会生成一个快照，然后分别多点击几次按钮，生成对应的快照，如下图
 
-![1753713976967](C:\Users\Thomas东\AppData\Roaming\Typora\typora-user-images\1753713976967.png)
+![https://raw.githubusercontent.com/jinxudong996/blog/refs/heads/main/html/code/img/](https://raw.githubusercontent.com/jinxudong996/blog/refs/heads/main/html/code/img/1753713976967.png)
 
 如上图，一共生成了8张快照，最后一次堆内存50.4M，而最后一次快照的右侧，还有这样几列，接下来依次介绍：
 
@@ -120,7 +120,7 @@ document
 
    以上面的例子，选择` Allocation  on timeline `（就是上面选择Heap snapshot下面），点击左上角的录制，就开始生成曲线，然后开始页面的操作，比如点击按钮，再次点击左上角的停止按钮，就会生成内存快照
 
-   ![1753716116812](C:\Users\Thomas东\AppData\Roaming\Typora\typora-user-images\1753716116812.png)
+   ![1753716116812](https://raw.githubusercontent.com/jinxudong996/blog/refs/heads/main/html/code/img/1753716116812.png)
 
    横轴是时间，纵轴就是内存，还可以拖动时间轴查看某个峰值的具体情况
 
@@ -176,7 +176,7 @@ leakBtn.addEventListener("click", () => {
 
 打开Memory面板，选择`Allocation instrumentation on timeline`，点击左上角的开始按钮，然后不停的触发`click`点击方法，然后就停止录制。
 
-![1753720124860](C:\Users\Thomas东\AppData\Roaming\Typora\typora-user-images\1753720124860.png)
+![1753720124860](https://raw.githubusercontent.com/jinxudong996/blog/refs/heads/main/html/code/img/1753720124860.png)
 
 因为过于卡顿，就导致没有生成有意义的曲线，这个搜了下资料也是正常的，在constructor这一列中可以看到内存站占用最大的就是函数类型，打开函数类型，就可以看到函数调用的地方，这就直接定位到了内存泄漏的地方了，非常方便。
 
@@ -186,7 +186,7 @@ leakBtn.addEventListener("click", () => {
 
 同样使用前面闭包的例子来看一下：步骤都差不多，选择`Allocation Sampling`，点击开始录制，就开始页面操作，一段时间后结束，生成快照。这个不需要精确到每次分配，只需了解哪些函数占用了大部分内存 ，速度就快乐很多，也流畅了很多
 
-![1753720516218](C:\Users\Thomas东\AppData\Roaming\Typora\typora-user-images\1753720516218.png)
+![1753720516218](https://raw.githubusercontent.com/jinxudong996/blog/refs/heads/main/html/code/img/1753720516218.png)
 
 因为这里只有一个函数，而且点击右侧的调用栈，也可以非常精准的定位到内存泄漏的地方。
 
@@ -246,7 +246,7 @@ document.getElementById("clean-global").addEventListener("click", () => {
 
 观测步骤都大差不差，直接看下生成的快照
 
-![1753721696944](C:\Users\Thomas东\AppData\Roaming\Typora\typora-user-images\1753721696944.png)
+![1753721696944](https://raw.githubusercontent.com/jinxudong996/blog/refs/heads/main/html/code/img/1753721696944.png)
 
 可以看到有一万的游离的dom节点，点击节点就可以看到节点的详情
 
@@ -270,7 +270,7 @@ document.getElementById("clean-global").addEventListener("click", () => {
 
   这个可以让我们非常方便的对比两个视图，有一个下拉选项可以非常方法方便的去选择和哪一个快照去做对比
 
-  ![1753722124026](C:\Users\Thomas东\AppData\Roaming\Typora\typora-user-images\1753722124026.png)
+  ![1753722124026](https://raw.githubusercontent.com/jinxudong996/blog/refs/heads/main/html/code/img/1753722124026.png)
 
   其中快照有这样几列，可以清晰的对比快照中构造函数内存的变化
 
@@ -286,7 +286,7 @@ document.getElementById("clean-global").addEventListener("click", () => {
 
    Containment 是 Chrome DevTools Memory 面板中 Heap snapshot 的一个视图模式，它展示了对象之间的引用关系和内存结构层次。
 
-  ![1753722344181](C:\Users\Thomas东\AppData\Roaming\Typora\typora-user-images\1753722344181.png)
+  ![1753722344181](https://raw.githubusercontent.com/jinxudong996/blog/refs/heads/main/html/code/img/1753722344181.png)
 
   快照也有这样几列
 
@@ -304,7 +304,7 @@ document.getElementById("clean-global").addEventListener("click", () => {
 
    Statistics 是 Chrome DevTools Memory 面板中 Heap snapshot 的一个视图模式，它提供了内存使用的统计概览，以图表和分类的方式展示内存分布情况。 
 
-  ![1753722668840](C:\Users\Thomas东\AppData\Roaming\Typora\typora-user-images\1753722668840.png)
+  ![1753722668840](https://raw.githubusercontent.com/jinxudong996/blog/refs/heads/main/html/code/img/1753722668840.png)
 
 ##### 案例分析
 
@@ -353,7 +353,7 @@ async function getStep() {
 
 首先使用`Heap Snapshot`，
 
-![1753724880464](C:\Users\Thomas东\AppData\Roaming\Typora\typora-user-images\1753724880464.png)
+![1753724880464](https://raw.githubusercontent.com/jinxudong996/blog/refs/heads/main/html/code/img/1753724880464.png)
 
 打了三个快照，对比第一个和第三个
 
@@ -361,7 +361,7 @@ async function getStep() {
 
 使用内存分配时间线看一下
 
- ![1753725305408](C:\Users\Thomas东\AppData\Roaming\Typora\typora-user-images\1753725305408.png)
+ ![1753725305408](https://raw.githubusercontent.com/jinxudong996/blog/refs/heads/main/html/code/img/1753725305408.png)
 
 快照总共也才40M，明显也不是内存泄漏，说明浏览器卡顿不是内存问题，而是性能问题。
 
@@ -371,7 +371,7 @@ async function getStep() {
 
 点击左上角录制按钮，然后开始点击`getStep`方法，一段时间后，停止录制，查看面板
 
-![1753857994040](C:\Users\Thomas东\AppData\Roaming\Typora\typora-user-images\1753857994040.png)
+![1753857994040](https://raw.githubusercontent.com/jinxudong996/blog/refs/heads/main/html/code/img/1753857994040.png)
 
 图中最上面那个淡淡的红线，就是是FPS,出现红色就表明浏览器的刷新帧率下降了，页面出现了卡顿的情况
 
@@ -379,13 +379,13 @@ async function getStep() {
 
 再看下中间部分的火焰图区域，可以滚动鼠标滑轮来选择时间区域，默认就是你整个录制的时间。首先一眼就看到了标红的快，而且右上角被一个红色三角所标记，这就是长任务，鼠标点击查看最下方的详情面板
 
-![1753859187466](C:\Users\Thomas东\AppData\Roaming\Typora\typora-user-images\1753859187466.png)
+![1753859187466](https://raw.githubusercontent.com/jinxudong996/blog/refs/heads/main/html/code/img/1753859187466.png)
 
 首先看`Summary`面板信息，一共7s的长任务，其中script脚本信息占据了6.5s，
 
 然后点击`Bottom-Up`面板，这个面板展示的是 从最底层的函数（叶子节点）开始，统计哪些调用链最终消耗了最多资源 
 
-![1753859392210](C:\Users\Thomas东\AppData\Roaming\Typora\typora-user-images\1753859392210.png)
+![1753859392210](https://raw.githubusercontent.com/jinxudong996/blog/refs/heads/main/html/code/img/1753859392210.png)
 
 可以看到最耗时间的就是setElementText方法，根据名称就可以判断这是一个设置文本内容的，结合实例代码就能大概推测出耗时间就是因为dom操作；第二的是一个匿名函数，点击最右侧就能进去，看到源代码，刚好就是我们的update方法。
 
@@ -393,7 +393,7 @@ async function getStep() {
 
 再看下`call tree`面板， 这个面板展示从程序入口开始的完整函数调用层级关系（即“谁调用了谁”） 
 
-![1753861111572](C:\Users\Thomas东\AppData\Roaming\Typora\typora-user-images\1753861111572.png)
+![1753861111572](https://raw.githubusercontent.com/jinxudong996/blog/refs/heads/main/html/code/img/1753861111572.png)
 
  `flushJobs`方法占据了89.9%的时间，这个方法主要是执行vue的异步更新队列，`patch`方法占据89.9%的时间，这个方法是虚拟dom的diff和dom的更新，后续的`run`是响应式依赖触发更新，`componentUpdateFn`是组件更新逻辑，都是占据时间89.9%，都是dom操作相关，再次论证了上述的结论：就是因为频繁的dom操作导致的。
 
