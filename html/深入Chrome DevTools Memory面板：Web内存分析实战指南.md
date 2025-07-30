@@ -48,8 +48,6 @@
    }
    ```
 
-   
-
 2. 引用计数法
 
    这是一种简单的垃圾回收策略，它通过跟踪每个对象的引用次数来决定是否回收内存，为每个对象维护一个引用计数器，记录当前有多少变量或者数据结构引用它，当引用计数变为0时，说明该对象不再被任何变量引用，可以立即回收其内存。
@@ -310,24 +308,93 @@ document.getElementById("clean-global").addEventListener("click", () => {
 
 ##### 案例分析
 
+这是一个真实的在业务开发中遇到的问题，尽可能抽离出关键的代码，
 
+```js
+// 响应式表格数据，初始 5000 条
+const tableData = ref(
+  Array.from({ length: 5000 }, (_, i) => ({ id: i, value: 0 }))
+);
 
+// 模拟后端返回的数据
+function getData() {
+  // 返回 1000 条数据，每条数据带有 id 和新 value
+  return Array.from({ length: 1000 }, (_, i) => ({
+    id: i,
+    value: Math.floor(Math.random() * 1000),
+  }));
+}
 
+// update 函数，遍历 tableData 并更新 value
+async function update(tableData, item) {
+  for (let tableItem of tableData.value) {
+    if (tableItem.id === item.id) {
+      tableItem.value = item.value;
+      break;
+    }
+  }
+}
 
+// 轮询函数，依次 await update
+async function getStep() {
+  const res = getData();
 
+  for (let item of res) {
+    await update(tableData, item);
+  }
+}
+```
 
-##### 常见内存问题与诊断方法
+简单的介绍下代码：getStep模拟轮询函数，函数内部有getData方法模拟后端数据，然后开始使用`for...of await`去更新视图，也就是`update`方法。目前`getStep`绑定在一个点击事件上，页面上每点击一次，就模拟轮询函数。
 
+描述下现状：点击一次按钮，也就是执行一次`getStep`，页面开始卡顿，随着前面的学习，自然想到内存泄漏，开始使用`Memory`面板来分析。
 
+###### 内存分析
 
+首先使用`Heap Snapshot`，
 
+![1753724880464](C:\Users\Thomas东\AppData\Roaming\Typora\typora-user-images\1753724880464.png)
 
-##### 高级技巧与优化策略
+打了三个快照，对比第一个和第三个
 
-1. **优化策略**
-   - 避免频繁创建临时对象
-   - 使用开发者工具的“强制GC”按钮（⚡图标）
-   - 结合Performance面板分析内存与帧率的关系
-2. **自动化监控方案**
-   - 使用`window.performance.memory` API
-   - 集成Lighthouse进行内存审计
+首先第一个构造函数是`{__v_isVNode...}`   这个是vue的虚拟dom，内存并没有增加，也就是最后一列Size Delta，第二个是vue编译部分的对象`(compiled code)`，但是也才增加了400kb，和内存泄漏完全不搭嘎。
+
+使用内存分配时间线看一下
+
+ ![1753725305408](C:\Users\Thomas东\AppData\Roaming\Typora\typora-user-images\1753725305408.png)
+
+快照总共也才40M，明显也不是内存泄漏，说明浏览器卡顿不是内存问题，而是性能问题。
+
+###### 性能分析
+
+性能分析就需要用到另外一个工具`Prformance`面板，就在`Memory`面板边上。
+
+点击左上角录制按钮，然后开始点击`getStep`方法，一段时间后，停止录制，查看面板
+
+![1753857994040](C:\Users\Thomas东\AppData\Roaming\Typora\typora-user-images\1753857994040.png)
+
+图中最上面那个淡淡的红线，就是是FPS,出现红色就表明浏览器的刷新帧率下降了，页面出现了卡顿的情况
+
+一条开始时绿色后来是红色的，这里是CPU资源使用情况，绿色表明网络通信和HTML解析，黄色表明JavaScript脚本执行时间，看到这里应该就知道也页面卡顿的原因了，应该就在于JavaScript脚本执行占用了大量的时间
+
+再看下中间部分的火焰图区域，可以滚动鼠标滑轮来选择时间区域，默认就是你整个录制的时间。首先一眼就看到了标红的快，而且右上角被一个红色三角所标记，这就是长任务，鼠标点击查看最下方的详情面板
+
+![1753859187466](C:\Users\Thomas东\AppData\Roaming\Typora\typora-user-images\1753859187466.png)
+
+首先看`Summary`面板信息，一共7s的长任务，其中script脚本信息占据了6.5s，
+
+然后点击`Bottom-Up`面板，这个面板展示的是 从最底层的函数（叶子节点）开始，统计哪些调用链最终消耗了最多资源 
+
+![1753859392210](C:\Users\Thomas东\AppData\Roaming\Typora\typora-user-images\1753859392210.png)
+
+可以看到最耗时间的就是setElementText方法，根据名称就可以判断这是一个设置文本内容的，结合实例代码就能大概推测出耗时间就是因为dom操作；第二的是一个匿名函数，点击最右侧就能进去，看到源代码，刚好就是我们的update方法。
+
+到此我们应该就能推测出这个实例页面卡顿的原因了，就是因为频繁的操作dom。看下核心的调用更新视图方法，`await update(tableData, item);` 这个调用方式有点背离了vue设计理念，vue就是为了避免大量的dom操作，引入了虚拟dom和diff算法，通过响应式去搜集依赖，将依赖放入一个异步的更新队列中，当主线程所有的虚拟dom比对完全后，才回去执行微任务中的更新队列，这样好处就在于可以避免出现数据的中间状态和尽可能的减少dom操作，即所有的数据变更，只会执行最终的变更操作。
+
+再看下`call tree`面板， 这个面板展示从程序入口开始的完整函数调用层级关系（即“谁调用了谁”） 
+
+![1753861111572](C:\Users\Thomas东\AppData\Roaming\Typora\typora-user-images\1753861111572.png)
+
+ `flushJobs`方法占据了89.9%的时间，这个方法主要是执行vue的异步更新队列，`patch`方法占据89.9%的时间，这个方法是虚拟dom的diff和dom的更新，后续的`run`是响应式依赖触发更新，`componentUpdateFn`是组件更新逻辑，都是占据时间89.9%，都是dom操作相关，再次论证了上述的结论：就是因为频繁的dom操作导致的。
+
+还有一个小插曲，再排查过程中，遇到这样一种情况，我在update代码中打印`performance.memory`，查看js Heap内存占用情况，发现js Heap内存内存不涨，但是任务管理器中的内存涨幅很快，后来查了下资料，js Heap内存是v8分配给创建的对象的内存，是可以被GC回收的，而任务管理器中的chrome内存这个则是整个chrome的系统总内存，包括js堆内存、DOM节点内存、缓存（图片字体）、GPU内存（页面渲染），扩展程序内存等。出现前面的情况，基本就是跟dom操作相关了，大概率就是dom节点内存和GPU内存飞涨。
