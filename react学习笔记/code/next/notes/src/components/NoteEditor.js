@@ -1,8 +1,18 @@
+/*
+ * @Author: jinxudong 18751241086@163.com
+ * @Date: 2025-08-08 10:27:35
+ * @LastEditors: jinxudong 18751241086@163.com
+ * @LastEditTime: 2025-08-20 15:15:55
+ * @FilePath: \notes\src\components\NoteEditor.js
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ */
 "use client";
 
 import { useState } from "react";
 import NotePreview from "@/components/NotePreview";
 import { useFormStatus } from "react-dom";
+
+import { deleteNote, saveNote } from "../app/actions";
 
 export default function NoteEditor({ noteId, initialTitle, initialBody }) {
   const { pending } = useFormStatus();
@@ -40,6 +50,7 @@ export default function NoteEditor({ noteId, initialTitle, initialBody }) {
             disabled={pending}
             type="submit"
             role="menuitem"
+            formAction={() => saveNote(noteId, title, body)}
           >
             <img
               src="/checkmark.svg"
@@ -55,6 +66,7 @@ export default function NoteEditor({ noteId, initialTitle, initialBody }) {
               className="note-editor-delete"
               disabled={pending}
               role="menuitem"
+              formAction={() => deleteNote(noteId)}
             >
               <img
                 src="/cross.svg"

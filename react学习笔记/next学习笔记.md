@@ -331,7 +331,76 @@ export function middleware(request) {
 
 ```
 
+##### Server Action
+
+Server Actions 是指在服务端执行的异步函数，它们可以在服务端和客户端组件中使用，以处理 Next.js 应用中的数据提交和更改。
+
+定义一个 Server Action 需要使用 React 的 ["use server"](https://link.juejin.cn/?target=https%3A%2F%2Freact.dev%2Freference%2Freact%2Fuse-server) 指令。按指令的定义位置分为两种用法：
+
+1. 将 "use server" 放到一个 async 函数的顶部表示该函数为 Server Action（函数级别）
+2. 将 "use server" 放到一个单独文件的顶部表示该文件导出的所有函数都是 Server Actions（模块级别）
+
+ 在服务端组件中，两种级别都可以使用，而在客户端组件中，只支持模块级别的。
+
+下面通过一个简单的todoList实例来学习下具体的用法：
 
 
-##### 数据库
+
+新建页面`todoList.js`
+
+```jsx
+import { findToDos, createToDo } from './actions';
+
+export default async function Page() {
+  const todos = await findToDos();
+  return (
+    <>
+      <form action={createToDo}>
+        <input type="text" name="todo" />
+        <button type="submit">Submit</button>
+      </form>
+      <ul>
+        {todos.map((todo, i) => <li key={i}>{todo}</li>)}
+      </ul>
+    </>
+  )
+}
+```
+
+在相同的目录下新建` actions.js `
+
+```jsx
+'use server'
+
+import { revalidatePath } from "next/cache";
+
+const data = ['阅读', '写作', '冥想']
+ 
+export async function findToDos() {
+  return data
+}
+
+export async function createToDo(formData) {
+  const todo = formData.get("todo");
+  data.push(todo);
+  revalidatePath("/detail");
+}
+
+```
+
+这个案例也是比较简单的，在`actions.js`中定义了两个方法`findToDos`和`createToDo`，`findToDos`方法会返回数据`data`，`createToDo`会在`data`上添加数据，然后将`createToDo`绑定到点单的`action`上面，每次提交都会执行该方法。
+
+###### 数据库
+
+在以前的写法中，涉及到写数据的操作时，必须要走API Route，或者前端`fetch('/api/xxx')`然后再调用后端，很是繁琐，现在有了`Server Action`，其设计初衷就是解决前后端分离下的写操作痛点，可以理解为：声明一个函数，这个函数只会在服务端执行，可以直接操作数据库、调用后端逻辑。而客户端能像调用普通函数一样触发它。
+
+
+
+
+
+
+
+
+
+
 

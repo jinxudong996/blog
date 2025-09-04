@@ -1,9 +1,20 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
     "paths": {
       "@/components/*": ["./src/components/*"],
       "@/lib/*": ["./src/lib/*"],
       "@/*": ["./src/*"]
-    }
-  }
+    },
+    "allowJs": true,
+    "checkJs": false,
+    "jsx": "preserve"
+  },
+  "include": [
+    "**/*.js",
+    "**/*.jsx",
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.vue"
+  ]
 }
