@@ -1,0 +1,1 @@
+我做了一次docker部署   前端产物有nginx、dist包  后端有指定的
