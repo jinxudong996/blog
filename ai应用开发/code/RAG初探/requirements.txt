@@ -1,0 +1,17 @@
+beautifulsoup4
+python-dotenv
+langchain-community
+langchain-text-splitters
+langchain-huggingface
+langchain-core
+langchain-deepseek
+sentence-transformers
+requests
+llama-index
+llama-index-core
+llama-index-embeddings-huggingface
+llama-index-llms-deepseek
+fastapi
+uvicorn
+pymysql
+redis

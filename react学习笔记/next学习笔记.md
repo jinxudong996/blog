@@ -394,6 +394,123 @@ export async function createToDo(formData) {
 
 在以前的写法中，涉及到写数据的操作时，必须要走API Route，或者前端`fetch('/api/xxx')`然后再调用后端，很是繁琐，现在有了`Server Action`，其设计初衷就是解决前后端分离下的写操作痛点，可以理解为：声明一个函数，这个函数只会在服务端执行，可以直接操作数据库、调用后端逻辑。而客户端能像调用普通函数一样触发它。
 
+接下来将连接数据库，写一个稍微真实一点的todolist，
+
+```tsx
+  <div className="min-h-screen p-8 max-w-xl mx-auto space-y-8">
+      <h1 className="text-2xl font-semibold">Todo List (MySQL)</h1>
+
+      <form action={addTodo} className="flex gap-2">
+        <input
+          name="title"
+          placeholder="输入待办事项"
+          className="flex-1 border rounded px-3 py-2"
+        />
+        <button
+          type="submit"
+          className="px-4 py-2 rounded bg-black text-white hover:bg-zinc-700"
+        >
+          添加
+        </button>
+      </form>
+
+      <ul className="space-y-3">
+        {todos.map((t) => (
+          <li
+            key={t.id}
+            className="flex items-center justify-between border rounded px-3 py-2"
+          >
+            <form action={toggleTodo} className="flex items-center gap-3">
+              <input type="hidden" name="id" value={t.id} />
+              <button
+                type="submit"
+                className="text-lg"
+                title="切换状态"
+              >
+                {t.completed ? "✅" : "⬜"}
+              </button>
+              <span className={t.completed ? "line-through text-zinc-500" : ""}>
+                {t.title}
+              </span>
+            </form>
+            <form action={deleteTodo}>
+              <input type="hidden" name="id" value={t.id} />
+              <button
+                type="submit"
+                className="text-sm text-red-600 hover:underline"
+              >
+                删除
+              </button>
+            </form>
+          </li>
+        ))}
+        {todos.length === 0 && <li className="text-zinc-500">暂无数据</li>}
+      </ul>
+
+      <div className="text-xs text-zinc-500">
+        数据来源：远程 MySQL (表 todos)
+      </div>
+    </div>
+```
+
+上面是一个todolist的界面，比较简单，就是遍历下todos，然后展示下状态，这个案例的核心在于表单中的actions方法，都定义在`action.ts`中0
+
+```tsx
+export async function getTodos() {
+  return await query<{ id: number; title: string; completed: 0 | 1 }>(
+    "SELECT id, title, completed FROM todos ORDER BY id DESC"
+  );
+}
+
+export async function addTodo(formData: FormData) {
+  const title = (formData.get("title") || "").toString().trim();
+  if (!title) return;
+  await query("INSERT INTO todos (title) VALUES (?)", [title]);
+  revalidatePath("/todos");
+}
+
+export async function toggleTodo(formData: FormData) {
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  await query("UPDATE todos SET completed = IF(completed=1,0,1) WHERE id = ?", [id]);
+  revalidatePath("/todos");
+}
+
+export async function deleteTodo(formData: FormData) {
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  await query("DELETE FROM todos WHERE id = ?", [id]);
+  revalidatePath("/todos");
+}
+
+// 可选：健康检查
+export async function pingDB() {
+  await getPool().query("SELECT 1");
+  return "ok";
+}
+```
+
+这里就定义了一些query中包括的sql语句，然后将查询结果返回出去，
+
+其中query是这样定义的
+
+```tsx
+export async function query<T = any>(sql: string, params: any[] = []): Promise<T[]> {
+  const [rows] = await getPool().query(sql, params);
+  return rows as T[];
+}
+```
+
+这个案例就可以非常清晰的意识到，action的便捷之处，按照以往常规的前后端交互，web界面要获取数据都是通过ajax向后端发送请求，后端去调用sql语句去查询
+
+
+
+
+
+
+
+##### 博客
+
 
 
 

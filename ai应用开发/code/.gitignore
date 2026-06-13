@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.pyc
+
+# Envs
+.env
+*.env
+
+# Data / checkpoints (按需调整)
+*.log
+
