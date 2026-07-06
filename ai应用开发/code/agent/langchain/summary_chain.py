@@ -19,8 +19,9 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
-from langchain_core.output_parsers import StrOutputParser
+from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableParallel
 from langchain_openai import ChatOpenAI
 
 
@@ -77,12 +78,92 @@ summary_prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
+keywords_prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "你是一个中文文本分析助手，擅长从文章中提取关键词。",
+        ),
+        (
+            "human",
+            """请从下面文章中提取 5-8 个关键词。
+
+要求：
+1. 只返回 JSON 数组。
+2. 不要返回 Markdown。
+3. 不要添加解释。
+
+示例：
+["关键词1", "关键词2", "关键词3"]
+
+文章：
+{article}
+""",
+        ),
+    ]
+)
+
+category_prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "你是一个中文文章分类助手，擅长判断文章所属类别。",
+        ),
+        (
+            "human",
+            """请判断下面文章最适合的一个类别。
+
+要求：
+1. 只返回一个简短类别名称。
+2. 不要添加解释。
+3. 类别可以是：文学、科技、商业、教育、历史、社会、人物、生活、其他。
+
+文章：
+{article}
+""",
+        ),
+    ]
+)
+
+sentiment_prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "你是一个中文情绪分析助手，擅长判断文章整体情绪倾向。",
+        ),
+        (
+            "human",
+            """请判断下面文章的整体情绪倾向。
+
+要求：
+1. 只返回一个词。
+2. 可选值只能是：积极、消极、中性、复杂。
+3. 不要添加解释。
+
+文章：
+{article}
+""",
+        ),
+    ]
+)
+
 model = create_chat_model()
 parser = StrOutputParser()
+json_parser = JsonOutputParser()
 
 # Core Runnable workflow:
 # article -> PromptTemplate -> ChatModel -> StrOutputParser -> summary
 summary_chain = summary_prompt | model | parser
+keywords_chain = keywords_prompt | model | json_parser
+category_chain = category_prompt | model | parser
+sentiment_chain = sentiment_prompt | model | parser
+
+analysis_chain = RunnableParallel(
+    summary=summary_chain,
+    keywords=keywords_chain,
+    category=category_chain,
+    sentiment=sentiment_chain,
+)
 
 
 def summarize(article: str) -> str:
@@ -90,8 +171,13 @@ def summarize(article: str) -> str:
     return summary_chain.invoke({"article": article})
 
 
+def analyze_article(article: str) -> dict:
+    """Run the parallel article analysis workflow."""
+    return analysis_chain.invoke({"article": article})
+
+
 if __name__ == "__main__":
     article_path = Path(__file__).resolve().parent.parent / "data" / "zhufu.txt"
     demo_article = article_path.read_text(encoding="utf-8")
 
-    print(summarize(demo_article))
+    print(analyze_article(demo_article))
