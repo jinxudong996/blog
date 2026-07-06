@@ -26,6 +26,7 @@ instruction + article
   -> selected chain
 """
 
+import json
 import os
 from pathlib import Path
 
@@ -215,6 +216,33 @@ analysis
     ]
 )
 
+final_answer_prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "你是一个中文文章处理助手，负责把工作流结果整理成清晰、自然、适合直接展示给用户的回答。",
+        ),
+        (
+            "human",
+            """请根据下面的工作流结果，生成最终回答。
+
+要求：
+1. 用中文回答。
+2. 不要提及内部 chain、Runnable、workflow 等实现细节。
+3. 如果 result 是列表，整理成简洁列表。
+4. 如果 result 是对象，按字段含义组织成易读内容。
+5. 如果 task 是 analysis，输出摘要、关键词、分类、情绪四部分。
+
+任务类型：
+{task}
+
+工作流结果：
+{result}
+""",
+        ),
+    ]
+)
+
 primary_model = create_chat_model()
 backup_model = create_backup_chat_model()
 parser = StrOutputParser()
@@ -268,6 +296,18 @@ def article_input(data: dict) -> dict:
     return {"article": data["article"]}
 
 
+def final_answer_input(workflow_output: dict) -> dict:
+    """Format routed workflow output for the final answer prompt."""
+    return {
+        "task": workflow_output["task"],
+        "result": json.dumps(
+            workflow_output["result"],
+            ensure_ascii=False,
+            indent=2,
+        ),
+    }
+
+
 summary_chain = with_retry_then_fallback(
     summary_prompt | primary_model | parser,
     summary_prompt | backup_model | parser,
@@ -317,6 +357,11 @@ article_workflow = routed_input_chain | RunnableParallel(
 )
 
 final_chain = with_temporary_retry(article_workflow)
+final_answer_chain = with_retry_then_fallback(
+    final_answer_prompt | primary_model | parser,
+    final_answer_prompt | backup_model | parser,
+)
+streaming_workflow_chain = final_chain | RunnableLambda(final_answer_input) | final_answer_chain
 
 
 def summarize(article: str) -> str:
@@ -339,9 +384,20 @@ def run_article_workflow(article: str, instruction: str) -> dict:
     )
 
 
+def stream_article_workflow(article: str, instruction: str):
+    """Stream the final user-facing answer."""
+    return streaming_workflow_chain.stream(
+        {
+            "article": article,
+            "instruction": instruction,
+        }
+    )
+
+
 if __name__ == "__main__":
     article_path = Path(__file__).resolve().parent.parent / "data" / "zhufu.txt"
     demo_article = article_path.read_text(encoding="utf-8")
 
     demo_instruction = "请提取这篇文章的关键词"
-    print(run_article_workflow(demo_article, demo_instruction))
+    for chunk in stream_article_workflow(demo_article, demo_instruction):
+        print(chunk, end="", flush=True)
