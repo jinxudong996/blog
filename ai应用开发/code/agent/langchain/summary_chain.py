@@ -55,9 +55,10 @@ def create_chat_model(
     base_url: str | None = None,
     api_key: str | None = None,
     temperature: float = 0.2,
+    timeout: int | None = None,
 ) -> ChatOpenAI:
     """Create an OpenAI-compatible chat model from .ENV config."""
-    timeout = int(os.getenv("LLM_TIMEOUT", "60"))
+    timeout = timeout or int(os.getenv("LLM_TIMEOUT", "60"))
 
     return ChatOpenAI(
         model=model or _required_env("LLM_MODEL_ID"),
@@ -65,6 +66,26 @@ def create_chat_model(
         api_key=api_key or _required_env("LLM_API_KEY"),
         temperature=temperature,
         timeout=timeout,
+    )
+
+
+def create_backup_chat_model() -> ChatOpenAI:
+    """Create a backup model for fallback; defaults to primary config if unset."""
+    return create_chat_model(
+        model=os.getenv("BACKUP_LLM_MODEL_ID")
+        or os.getenv("LLM_BACKUP_MODEL_ID")
+        or _required_env("LLM_MODEL_ID"),
+        base_url=os.getenv("BACKUP_LLM_BASE_URL")
+        or os.getenv("LLM_BACKUP_BASE_URL")
+        or _required_env("LLM_BASE_URL"),
+        api_key=os.getenv("BACKUP_LLM_API_KEY")
+        or os.getenv("LLM_BACKUP_API_KEY")
+        or _required_env("LLM_API_KEY"),
+        timeout=int(
+            os.getenv("BACKUP_LLM_TIMEOUT")
+            or os.getenv("LLM_BACKUP_TIMEOUT")
+            or os.getenv("LLM_TIMEOUT", "60")
+        ),
     )
 
 
@@ -194,7 +215,8 @@ analysis
     ]
 )
 
-model = create_chat_model()
+primary_model = create_chat_model()
+backup_model = create_backup_chat_model()
 parser = StrOutputParser()
 json_parser = JsonOutputParser()
 
@@ -218,6 +240,17 @@ def with_temporary_retry(runnable):
     )
 
 
+def with_retry_then_fallback(primary_runnable, backup_runnable):
+    """Retry the primary runnable first, then switch to the backup runnable."""
+    primary_with_retry = with_temporary_retry(primary_runnable)
+    backup_with_retry = with_temporary_retry(backup_runnable)
+
+    return primary_with_retry.with_fallbacks(
+        [backup_with_retry],
+        exceptions_to_handle=RETRYABLE_EXCEPTIONS,
+    )
+
+
 def normalize_task(text: str) -> str:
     """Normalize model output into one of the supported route names."""
     task = text.strip().lower()
@@ -235,10 +268,22 @@ def article_input(data: dict) -> dict:
     return {"article": data["article"]}
 
 
-summary_chain = with_temporary_retry(summary_prompt | model | parser)
-keywords_chain = with_temporary_retry(keywords_prompt | model | json_parser)
-category_chain = with_temporary_retry(category_prompt | model | parser)
-sentiment_chain = with_temporary_retry(sentiment_prompt | model | parser)
+summary_chain = with_retry_then_fallback(
+    summary_prompt | primary_model | parser,
+    summary_prompt | backup_model | parser,
+)
+keywords_chain = with_retry_then_fallback(
+    keywords_prompt | primary_model | json_parser,
+    keywords_prompt | backup_model | json_parser,
+)
+category_chain = with_retry_then_fallback(
+    category_prompt | primary_model | parser,
+    category_prompt | backup_model | parser,
+)
+sentiment_chain = with_retry_then_fallback(
+    sentiment_prompt | primary_model | parser,
+    sentiment_prompt | backup_model | parser,
+)
 
 analysis_chain = RunnableParallel(
     summary=summary_chain,
@@ -247,8 +292,9 @@ analysis_chain = RunnableParallel(
     sentiment=sentiment_chain,
 )
 
-task_identify_chain = with_temporary_retry(
-    task_identify_prompt | model | parser | RunnableLambda(normalize_task)
+task_identify_chain = with_retry_then_fallback(
+    task_identify_prompt | primary_model | parser | RunnableLambda(normalize_task),
+    task_identify_prompt | backup_model | parser | RunnableLambda(normalize_task),
 )
 article_only = RunnableLambda(article_input)
 
