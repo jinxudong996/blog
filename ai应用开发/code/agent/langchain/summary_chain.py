@@ -1,5 +1,7 @@
 """
-Summary chain demo:
+Summary and analysis chain demo.
+
+Base flow:
 
 article
   -> PromptTemplate
@@ -7,12 +9,21 @@ article
   -> StrOutputParser
   -> summary
 
-The model config is loaded from agent/.ENV:
+Parallel flow:
 
-LLM_API_KEY=...
-LLM_MODEL_ID=...
-LLM_BASE_URL=...
-LLM_TIMEOUT=60
+article
+  -> summary_chain
+  -> keywords_chain
+  -> category_chain
+  -> sentiment_chain
+  -> dict
+
+Branch flow:
+
+instruction + article
+  -> task_identify_chain
+  -> RunnableBranch
+  -> selected chain
 """
 
 import os
@@ -21,7 +32,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnableParallel
+from langchain_core.runnables import RunnableBranch, RunnableLambda, RunnableParallel
 from langchain_openai import ChatOpenAI
 
 
@@ -147,12 +158,62 @@ sentiment_prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
+task_identify_prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "你是一个任务路由助手，根据用户指令选择最合适的文章处理链。",
+        ),
+        (
+            "human",
+            """请根据用户指令判断任务类型。
+
+只能返回下面 5 个值之一：
+summarize
+keywords
+category
+sentiment
+analysis
+
+判断规则：
+- 用户想总结、概括、摘要文章时，返回 summarize。
+- 用户想提取关键词、标签、主题词时，返回 keywords。
+- 用户想判断文章类型、类别、题材时，返回 category。
+- 用户想分析情绪、态度、倾向时，返回 sentiment。
+- 用户想要完整分析，或者无法判断时，返回 analysis。
+
+用户指令：
+{instruction}
+
+文章：
+{article}
+""",
+        ),
+    ]
+)
+
 model = create_chat_model()
 parser = StrOutputParser()
 json_parser = JsonOutputParser()
 
-# Core Runnable workflow:
-# article -> PromptTemplate -> ChatModel -> StrOutputParser -> summary
+
+def normalize_task(text: str) -> str:
+    """Normalize model output into one of the supported route names."""
+    task = text.strip().lower()
+    allowed_tasks = ("summarize", "keywords", "category", "sentiment", "analysis")
+
+    for allowed_task in allowed_tasks:
+        if allowed_task in task:
+            return allowed_task
+
+    return "analysis"
+
+
+def article_input(data: dict) -> dict:
+    """Keep only the article field before entering a task chain."""
+    return {"article": data["article"]}
+
+
 summary_chain = summary_prompt | model | parser
 keywords_chain = keywords_prompt | model | json_parser
 category_chain = category_prompt | model | parser
@@ -163,6 +224,27 @@ analysis_chain = RunnableParallel(
     keywords=keywords_chain,
     category=category_chain,
     sentiment=sentiment_chain,
+)
+
+task_identify_chain = task_identify_prompt | model | parser | RunnableLambda(normalize_task)
+article_only = RunnableLambda(article_input)
+
+branch_chain = RunnableBranch(
+    (lambda x: x["task"] == "summarize", article_only | summary_chain),
+    (lambda x: x["task"] == "keywords", article_only | keywords_chain),
+    (lambda x: x["task"] == "category", article_only | category_chain),
+    (lambda x: x["task"] == "sentiment", article_only | sentiment_chain),
+    article_only | analysis_chain,
+)
+
+routed_input_chain = RunnableParallel(
+    article=lambda x: x["article"],
+    task=task_identify_chain,
+)
+
+article_workflow = routed_input_chain | RunnableParallel(
+    task=lambda x: x["task"],
+    result=branch_chain,
 )
 
 
@@ -176,8 +258,19 @@ def analyze_article(article: str) -> dict:
     return analysis_chain.invoke({"article": article})
 
 
+def run_article_workflow(article: str, instruction: str) -> dict:
+    """Identify the task and route to the matching RunnableBranch."""
+    return article_workflow.invoke(
+        {
+            "article": article,
+            "instruction": instruction,
+        }
+    )
+
+
 if __name__ == "__main__":
     article_path = Path(__file__).resolve().parent.parent / "data" / "zhufu.txt"
     demo_article = article_path.read_text(encoding="utf-8")
 
-    print(analyze_article(demo_article))
+    demo_instruction = "请提取这篇文章的关键词"
+    print(run_article_workflow(demo_article, demo_instruction))
