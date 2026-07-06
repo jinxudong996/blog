@@ -30,10 +30,12 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
+from langchain_core.exceptions import OutputParserException
 from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableBranch, RunnableLambda, RunnableParallel
 from langchain_openai import ChatOpenAI
+from openai import APIConnectionError, APITimeoutError, InternalServerError, RateLimitError
 
 
 ENV_PATH = Path(__file__).resolve().parent.parent / ".ENV"
@@ -196,6 +198,25 @@ model = create_chat_model()
 parser = StrOutputParser()
 json_parser = JsonOutputParser()
 
+RETRYABLE_EXCEPTIONS = (
+    TimeoutError,
+    ConnectionError,
+    APIConnectionError,
+    APITimeoutError,
+    RateLimitError,
+    InternalServerError,
+    OutputParserException,
+)
+
+
+def with_temporary_retry(runnable):
+    """Retry temporary model/network/parser failures, then re-raise."""
+    return runnable.with_retry(
+        retry_if_exception_type=RETRYABLE_EXCEPTIONS,
+        stop_after_attempt=3,
+        wait_exponential_jitter=True,
+    )
+
 
 def normalize_task(text: str) -> str:
     """Normalize model output into one of the supported route names."""
@@ -214,10 +235,10 @@ def article_input(data: dict) -> dict:
     return {"article": data["article"]}
 
 
-summary_chain = summary_prompt | model | parser
-keywords_chain = keywords_prompt | model | json_parser
-category_chain = category_prompt | model | parser
-sentiment_chain = sentiment_prompt | model | parser
+summary_chain = with_temporary_retry(summary_prompt | model | parser)
+keywords_chain = with_temporary_retry(keywords_prompt | model | json_parser)
+category_chain = with_temporary_retry(category_prompt | model | parser)
+sentiment_chain = with_temporary_retry(sentiment_prompt | model | parser)
 
 analysis_chain = RunnableParallel(
     summary=summary_chain,
@@ -226,7 +247,9 @@ analysis_chain = RunnableParallel(
     sentiment=sentiment_chain,
 )
 
-task_identify_chain = task_identify_prompt | model | parser | RunnableLambda(normalize_task)
+task_identify_chain = with_temporary_retry(
+    task_identify_prompt | model | parser | RunnableLambda(normalize_task)
+)
 article_only = RunnableLambda(article_input)
 
 branch_chain = RunnableBranch(
@@ -247,6 +270,8 @@ article_workflow = routed_input_chain | RunnableParallel(
     result=branch_chain,
 )
 
+final_chain = with_temporary_retry(article_workflow)
+
 
 def summarize(article: str) -> str:
     """Run summary_chain with a plain article string."""
@@ -260,7 +285,7 @@ def analyze_article(article: str) -> dict:
 
 def run_article_workflow(article: str, instruction: str) -> dict:
     """Identify the task and route to the matching RunnableBranch."""
-    return article_workflow.invoke(
+    return final_chain.invoke(
         {
             "article": article,
             "instruction": instruction,
