@@ -1,29 +1,15 @@
 """
-Summary and analysis chain demo.
+Article workflow demo with a reusable Prompt Library.
 
-Base flow:
+The workflow still demonstrates:
+- Prompt -> Model -> Parser
+- RunnableParallel
+- RunnableBranch
+- with_retry
+- with_fallbacks
+- stream
 
-article
-  -> PromptTemplate
-  -> ChatModel
-  -> StrOutputParser
-  -> summary
-
-Parallel flow:
-
-article
-  -> summary_chain
-  -> keywords_chain
-  -> category_chain
-  -> sentiment_chain
-  -> dict
-
-Branch flow:
-
-instruction + article
-  -> task_identify_chain
-  -> RunnableBranch
-  -> selected chain
+Prompts live in agent/langchain/prompt_library.
 """
 
 import json
@@ -33,10 +19,25 @@ from pathlib import Path
 from dotenv import load_dotenv
 from langchain_core.exceptions import OutputParserException
 from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableBranch, RunnableLambda, RunnableParallel
 from langchain_openai import ChatOpenAI
 from openai import APIConnectionError, APITimeoutError, InternalServerError, RateLimitError
+from prompt_library import (
+    CATEGORY_PROMPT_VERSION,
+    FINAL_ANSWER_PROMPT_VERSION,
+    KEYWORDS_PROMPT_VERSION,
+    PROMPT_VERSIONS,
+    SENTIMENT_PROMPT_VERSION,
+    SUMMARY_PROMPT_VERSION,
+    TASK_IDENTIFY_PROMPT_VERSION,
+    category_prompt,
+    final_answer_prompt,
+    keywords_prompt,
+    sentiment_prompt,
+    summary_prompt,
+    task_identify_prompt,
+)
+from prompt_library.debug import preview_prompt
 
 
 ENV_PATH = Path(__file__).resolve().parent.parent / ".ENV"
@@ -89,159 +90,6 @@ def create_backup_chat_model() -> ChatOpenAI:
         ),
     )
 
-
-summary_prompt = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-            "你是一个专业的中文内容编辑，擅长把长文章总结成清晰、准确、易读的摘要。",
-        ),
-        (
-            "human",
-            """请阅读下面的文章，并生成摘要。
-
-要求：
-1. 用中文回答。
-2. 先给出 3-5 条核心要点。
-3. 最后给出一句话总结。
-4. 只基于文章内容总结，不要编造文章中没有的信息。
-
-文章：
-{article}
-""",
-        ),
-    ]
-)
-
-keywords_prompt = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-            "你是一个中文文本分析助手，擅长从文章中提取关键词。",
-        ),
-        (
-            "human",
-            """请从下面文章中提取 5-8 个关键词。
-
-要求：
-1. 只返回 JSON 数组。
-2. 不要返回 Markdown。
-3. 不要添加解释。
-
-示例：
-["关键词1", "关键词2", "关键词3"]
-
-文章：
-{article}
-""",
-        ),
-    ]
-)
-
-category_prompt = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-            "你是一个中文文章分类助手，擅长判断文章所属类别。",
-        ),
-        (
-            "human",
-            """请判断下面文章最适合的一个类别。
-
-要求：
-1. 只返回一个简短类别名称。
-2. 不要添加解释。
-3. 类别可以是：文学、科技、商业、教育、历史、社会、人物、生活、其他。
-
-文章：
-{article}
-""",
-        ),
-    ]
-)
-
-sentiment_prompt = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-            "你是一个中文情绪分析助手，擅长判断文章整体情绪倾向。",
-        ),
-        (
-            "human",
-            """请判断下面文章的整体情绪倾向。
-
-要求：
-1. 只返回一个词。
-2. 可选值只能是：积极、消极、中性、复杂。
-3. 不要添加解释。
-
-文章：
-{article}
-""",
-        ),
-    ]
-)
-
-task_identify_prompt = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-            "你是一个任务路由助手，根据用户指令选择最合适的文章处理链。",
-        ),
-        (
-            "human",
-            """请根据用户指令判断任务类型。
-
-只能返回下面 5 个值之一：
-summarize
-keywords
-category
-sentiment
-analysis
-
-判断规则：
-- 用户想总结、概括、摘要文章时，返回 summarize。
-- 用户想提取关键词、标签、主题词时，返回 keywords。
-- 用户想判断文章类型、类别、题材时，返回 category。
-- 用户想分析情绪、态度、倾向时，返回 sentiment。
-- 用户想要完整分析，或者无法判断时，返回 analysis。
-
-用户指令：
-{instruction}
-
-文章：
-{article}
-""",
-        ),
-    ]
-)
-
-final_answer_prompt = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-            "你是一个中文文章处理助手，负责把工作流结果整理成清晰、自然、适合直接展示给用户的回答。",
-        ),
-        (
-            "human",
-            """请根据下面的工作流结果，生成最终回答。
-
-要求：
-1. 用中文回答。
-2. 不要提及内部 chain、Runnable、workflow 等实现细节。
-3. 如果 result 是列表，整理成简洁列表。
-4. 如果 result 是对象，按字段含义组织成易读内容。
-5. 如果 task 是 analysis，输出摘要、关键词、分类、情绪四部分。
-
-任务类型：
-{task}
-
-工作流结果：
-{result}
-""",
-        ),
-    ]
-)
 
 primary_model = create_chat_model()
 backup_model = create_backup_chat_model()
@@ -311,19 +159,22 @@ def final_answer_input(workflow_output: dict) -> dict:
 summary_chain = with_retry_then_fallback(
     summary_prompt | primary_model | parser,
     summary_prompt | backup_model | parser,
-)
+).with_config(metadata={"prompt_version": SUMMARY_PROMPT_VERSION})
+
 keywords_chain = with_retry_then_fallback(
     keywords_prompt | primary_model | json_parser,
     keywords_prompt | backup_model | json_parser,
-)
+).with_config(metadata={"prompt_version": KEYWORDS_PROMPT_VERSION})
+
 category_chain = with_retry_then_fallback(
     category_prompt | primary_model | parser,
     category_prompt | backup_model | parser,
-)
+).with_config(metadata={"prompt_version": CATEGORY_PROMPT_VERSION})
+
 sentiment_chain = with_retry_then_fallback(
     sentiment_prompt | primary_model | parser,
     sentiment_prompt | backup_model | parser,
-)
+).with_config(metadata={"prompt_version": SENTIMENT_PROMPT_VERSION})
 
 analysis_chain = RunnableParallel(
     summary=summary_chain,
@@ -335,7 +186,8 @@ analysis_chain = RunnableParallel(
 task_identify_chain = with_retry_then_fallback(
     task_identify_prompt | primary_model | parser | RunnableLambda(normalize_task),
     task_identify_prompt | backup_model | parser | RunnableLambda(normalize_task),
-)
+).with_config(metadata={"prompt_version": TASK_IDENTIFY_PROMPT_VERSION})
+
 article_only = RunnableLambda(article_input)
 
 branch_chain = RunnableBranch(
@@ -357,10 +209,12 @@ article_workflow = routed_input_chain | RunnableParallel(
 )
 
 final_chain = with_temporary_retry(article_workflow)
+
 final_answer_chain = with_retry_then_fallback(
     final_answer_prompt | primary_model | parser,
     final_answer_prompt | backup_model | parser,
-)
+).with_config(metadata={"prompt_version": FINAL_ANSWER_PROMPT_VERSION})
+
 streaming_workflow_chain = final_chain | RunnableLambda(final_answer_input) | final_answer_chain
 
 
@@ -397,7 +251,11 @@ def stream_article_workflow(article: str, instruction: str):
 if __name__ == "__main__":
     article_path = Path(__file__).resolve().parent.parent / "data" / "zhufu.txt"
     demo_article = article_path.read_text(encoding="utf-8")
-
     demo_instruction = "请提取这篇文章的关键词"
+
+    print("Prompt versions:", PROMPT_VERSIONS)
+    preview_prompt(task_identify_prompt, {"article": demo_article[:500], "instruction": demo_instruction})
+
+    print("\n=== Streaming Answer ===")
     for chunk in stream_article_workflow(demo_article, demo_instruction):
         print(chunk, end="", flush=True)

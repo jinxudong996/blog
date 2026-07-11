@@ -1181,175 +1181,286 @@ if __name__ == "__main__":
 
 ###### 增加并行执行
 
-现在文章只有一个摘要总结，现在需要文章的关键字、分类以及文章的情绪倾向，
+现在文章只有一个摘要总结，现在需要文章的关键字、分类以及文章的情绪倾向，就需要额外再创建三个chian
 
+```python
+keywords_prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "你是一个中文文本分析助手，擅长从文章中提取关键词。",
+        ),
+        (
+            "human",
+            """请从下面文章中提取 5-8 个关键词。
 
+要求：
+1. 只返回 JSON 数组。
+2. 不要返回 Markdown。
+3. 不要添加解释。
 
+示例：
+["关键词1", "关键词2", "关键词3"]
 
+文章：
+{article}
+""",
+        ),
+    ]
+)
+#提取关键字的chain
+keywords_chain = keywords_prompt | model | json_parser
 
+category_prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "你是一个中文文章分类助手，擅长判断文章所属类别。",
+        ),
+        (
+            "human",
+            """请判断下面文章最适合的一个类别。
 
+要求：
+1. 只返回一个简短类别名称。
+2. 不要添加解释。
+3. 类别可以是：文学、科技、商业、教育、历史、社会、人物、生活、其他。
 
-接着引入 `RunnableParallel`。
+文章：
+{article}
+""",
+        ),
+    ]
+)
+#判断文章所属类别的chain
+category_chain = category_prompt | model | parser
+sentiment_prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "你是一个中文情绪分析助手，擅长判断文章整体情绪倾向。",
+        ),
+        (
+            "human",
+            """请判断下面文章的整体情绪倾向。
 
-现在不只生成摘要，还要同时生成：
+要求：
+1. 只返回一个词。
+2. 可选值只能是：积极、消极、中性、复杂。
+3. 不要添加解释。
+
+文章：
+{article}
+""",
+        ),
+    ]
+)
+#分析文章情绪倾向的chian
+sentiment_chain = sentiment_prompt | model | parser
 
 ```
-summary：文章摘要
-keywords：关键词
-category：文章分类
-sentiment：情绪倾向
+
+然后就可以使用前面介绍过的`RunnableParallel`，并行创建这四个chain
+
+```python
+analysis_chain = RunnableParallel(
+    summary=summary_chain,
+    keywords=keywords_chain,
+    category=category_chain,
+    sentiment=sentiment_chain,
+)
 ```
 
-流程：
+本节输出：
 
 ```
-article
-  ├─> summary_chain
-  ├─> keywords_chain
-  ├─> category_chain
-  └─> sentiment_chain
-        ↓
-合并成 dict
+{'summary': '### 核心要点\n\n1. **故事背景与叙述者**：故事发生在旧历年底的鲁镇，叙述者“我”回到故乡，暂住在鲁四老爷家，感受到浓厚的“祝福”氛围，但内心不安，决定离开。\n\n2. **祥林嫂的悲惨遭遇**：祥林嫂是一个勤劳的寡妇，先后经历丈夫去世、被婆婆强迫改嫁、第二任丈夫死于伤寒、儿子阿毛被狼叼走等打击，最终沦为乞丐，在祝福之夜冻饿而死。\n\n3. **社会冷漠与封建礼教**：鲁镇的人们对祥林嫂的苦难从同情转为厌烦，鲁四老爷视她为“谬种”，禁止她参与祭祀，认为她“败坏风俗”；柳妈以“阴司锯开”的迷信恐吓她，导致她捐门槛赎罪却仍被排斥。\n\n4. **祥林嫂的精神崩溃**：在反复讲述儿子被狼吃的故事遭人厌弃后，祥林嫂捐门槛仍不被接纳，彻底失去希望，变得麻木、胆怯，最终被赶出家门，沦为乞丐。\n\n5. **叙述者的反思**：叙述者面对祥林嫂关于“魂灵有无”的追问，含糊其辞，事后感到不安，最终在祝福的爆竹声中，以“懒散且舒适”的心态结束故事，暗示对现实的无奈与逃避。\n\n### 一句话总结\n\n鲁迅通过祥林嫂的悲剧，深刻揭露了封建礼教、迷信思想和社会冷漠对底层妇女的摧残，以及知识分子在残酷现实面前的无力与自欺。', 'keywords': ['祥林嫂', '鲁镇', '祝福', '四叔', '阿毛', '捐门槛', '魂灵', '封建礼教'], 'category': '文学', 'sentiment': '消极'}
 ```
 
-输出结构：
 
-```
-{
-    "summary": "...",
-    "keywords": ["...", "..."],
-    "category": "...",
-    "sentiment": "..."
-}
-```
-
-这一阶段重点说明：
-
-```
-多个任务之间没有依赖关系，所以可以并行。
-RunnableParallel 会把同一个输入交给多个 Runnable。
-最终结果会合并成一个 dict。
-```
 
 ######  增加条件分支 
 
-接着引入 `RunnableBranch`。
+有了这四个chain，就可以根据用户的输入，来判断用户的任务类型，然后再去执行不同的chian，这就需要用到前面介绍的`RunnableBranch`，根据输入判断条件，选择其中一条 Runnable 执行。
 
-系统先判断用户任务类型，然后走不同流程。
+具体的流程是这样的，首先用户输入一段文本，有一个任务识别的chain作为路由分发，根据任务的类型分别调用不同的chain。
 
-任务类型可以设计成：
+```python
+task_identify_prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "你是一个任务路由助手，根据用户指令选择最合适的文章处理链。",
+        ),
+        (
+            "human",
+            """请根据用户指令判断任务类型。
+
+只能返回下面 5 个值之一：
+summarize
+keywords
+category
+sentiment
+analysis
+
+判断规则：
+- 用户想总结、概括、摘要文章时，返回 summarize。
+- 用户想提取关键词、标签、主题词时，返回 keywords。
+- 用户想判断文章类型、类别、题材时，返回 category。
+- 用户想分析情绪、态度、倾向时，返回 sentiment。
+- 用户想要完整分析，或者无法判断时，返回 analysis。
+
+用户指令：
+{instruction}
+
+文章：
+{article}
+""",
+        ),
+    ]
+)
+#任务分发的chain'
+task_identify_chain = task_identify_prompt | model | parser | RunnableLambda(normalize_task)
+
+def normalize_task(text: str) -> str:
+    """Normalize model output into one of the supported route names."""
+    task = text.strip().lower()
+    allowed_tasks = ("summarize", "keywords", "category", "sentiment", "analysis")
+
+    for allowed_task in allowed_tasks:
+        if allowed_task in task:
+            return allowed_task
+
+    return "analysis"
 
 ```
-summarize：总结文章
-rewrite：改写文章
-extract：提取要点
-risk_check：检查风险或敏感内容
+
+这个chain就是一个判断任务类型的，根据用户的输入会返回一个类别，`"summarize", "keywords", "category", "sentiment", "analysis"`就是这里面的其中一个，如果没有就默认返回`"analysis"`
+
+```python
+def run_article_workflow(article: str, instruction: str) -> dict:
+    """Identify the task and route to the matching RunnableBranch."""
+    return article_workflow.invoke(
+        {
+            "article": article,
+            "instruction": instruction,
+        }
+    )
+article_workflow = routed_input_chain | RunnableParallel(
+    task=lambda x: x["task"],
+    result=branch_chain,
+)
+routed_input_chain = RunnableParallel(
+    article=lambda x: x["article"],
+    task=task_identify_chain,
+)
+branch_chain = RunnableBranch(
+    (lambda x: x["task"] == "summarize", article_only | summary_chain),
+    (lambda x: x["task"] == "keywords", article_only | keywords_chain),
+    (lambda x: x["task"] == "category", article_only | category_chain),
+    (lambda x: x["task"] == "sentiment", article_only | sentiment_chain),
+    article_only | analysis_chain,
+)
+article_only = RunnableLambda(article_input)
+
+#调用方
+demo_instruction = "请提取这篇文章的关键词"
+print(run_article_workflow(demo_article, demo_instruction))
+#输出
+{'task': 'keywords', 'result': ['祥林嫂', '鲁镇', '祝福', '四叔', '阿毛', '捐门槛', '魂灵', '封建礼教']}
 ```
 
-流程：
-
-```
-用户输入
-  ↓
-任务识别 chain
-  ↓
-RunnableBranch
-      ├─ 如果 task = summarize -> 摘要流程
-      ├─ 如果 task = rewrite -> 改写流程
-      ├─ 如果 task = extract -> 要点提取流程
-      └─ 默认 -> 通用分析流程
-```
-
-这一阶段重点说明：
-
-```
-RunnableBranch 类似 if / elif / else。
-它根据输入内容选择不同 Runnable。
-不同分支可以是完全不同的链。
-```
+`run_article_workflow`方法调用时，传递了原本和用户的问题，然后执行`article_workflow`将这两个参数透传下去，`article_workflow`会先去执行`routed_input_chain`,这个chain就是最终的输出结果，将入参转化成{task：‘’，result：‘’}，`routed_input_chain`会将入参转换成{article：‘’，task：‘’}，`branch_chain`这个chain就是chain的转发。
 
 ###### 增加重试机制
 
-接着给关键链路加 `with_retry()`。
+接着给关键链路加 `with_retry()`，比如网络超时、模型返回的格式不稳定，可以多试几次
 
-适合加重试的位置：
+```python
+RETRYABLE_EXCEPTIONS = (
+    TimeoutError,
+    ConnectionError,
+    APIConnectionError,
+    APITimeoutError,
+    RateLimitError,
+    InternalServerError,
+    OutputParserException,
+)
 
-```
-模型调用链
-任务识别链
-结构化解析链
-最终生成链
+
+def with_temporary_retry(runnable):
+    """Retry temporary model/network/parser failures, then re-raise."""
+    return runnable.with_retry(
+        retry_if_exception_type=RETRYABLE_EXCEPTIONS,
+        stop_after_attempt=3,
+        wait_exponential_jitter=True,
+    )
+
+#关键的chain都被包裹着
+summary_chain = with_temporary_retry(summary_prompt | model | parser)
+keywords_chain = with_temporary_retry(keywords_prompt | model | json_parser)
+category_chain = with_temporary_retry(category_prompt | model | parser)
+sentiment_chain = with_temporary_retry(sentiment_prompt | model | parser)
+task_identify_chain = with_temporary_retry(
+    task_identify_prompt | model | parser | RunnableLambda(normalize_task)
+)
+
+final_chain = with_temporary_retry(article_workflow)
 ```
 
-比如：
 
-```
-final_chain.with_retry()
-```
-
-设计说明：
-
-```
-模型调用可能超时
-模型返回格式可能偶发不稳定
-网络请求可能失败
-Parser 可能解析失败
-```
-
-重试策略：
-
-```
-最多重试 3 次
-只对临时异常重试
-重试失败后继续抛出异常
-```
-
-这一阶段重点说明：
-
-```
-with_retry 是对同一个 Runnable 再试几次。
-它适合处理临时性失败，不适合修复逻辑错误。
-```
 
 ###### 增加Fallback
 
-接着引入 `with_fallbacks()`。
+当 `with_retry` 继续失败后，接着引入 `with_fallbacks()`，选用备用模型继续处理。
 
-设计两个模型：
+```python
+def create_backup_chat_model() -> ChatOpenAI:
+    """Create a backup model for fallback; defaults to primary config if unset."""
+    return create_chat_model(
+        model=os.getenv("BACKUP_LLM_MODEL_ID")
+        or os.getenv("LLM_BACKUP_MODEL_ID")
+        or _required_env("LLM_MODEL_ID"),
+        base_url=os.getenv("BACKUP_LLM_BASE_URL")
+        or os.getenv("LLM_BACKUP_BASE_URL")
+        or _required_env("LLM_BASE_URL"),
+        api_key=os.getenv("BACKUP_LLM_API_KEY")
+        or os.getenv("LLM_BACKUP_API_KEY")
+        or _required_env("LLM_API_KEY"),
+        timeout=int(
+            os.getenv("BACKUP_LLM_TIMEOUT")
+            or os.getenv("LLM_BACKUP_TIMEOUT")
+            or os.getenv("LLM_TIMEOUT", "60")
+        ),
+    )
+def with_retry_then_fallback(primary_runnable, backup_runnable):
+    """Retry the primary runnable first, then switch to the backup runnable."""
+    primary_with_retry = with_temporary_retry(primary_runnable)
+    backup_with_retry = with_temporary_retry(backup_runnable)
 
+    return primary_with_retry.with_fallbacks(
+        [backup_with_retry],
+        exceptions_to_handle=RETRYABLE_EXCEPTIONS,
+    )
+summary_chain = with_retry_then_fallback(
+    summary_prompt | primary_model | parser,
+    summary_prompt | backup_model | parser,
+)
+keywords_chain = with_retry_then_fallback(
+    keywords_prompt | primary_model | json_parser,
+    keywords_prompt | backup_model | json_parser,
+)
+category_chain = with_retry_then_fallback(
+    category_prompt | primary_model | parser,
+    category_prompt | backup_model | parser,
+)
+sentiment_chain = with_retry_then_fallback(
+    sentiment_prompt | primary_model | parser,
+    sentiment_prompt | backup_model | parser,
+)
 ```
-primary_model：主模型，效果更好
-backup_model：备用模型，速度快或成本低
-```
 
-当主模型失败时，自动切换备用模型。
-
-流程：
-
-```
-primary_chain
-  ↓ 如果成功
-返回结果
-
-primary_chain
-  ↓ 如果失败
-fallback_chain
-  ↓
-返回备用结果
-```
-
-可以设计成：
-
-```
-主模型：用于高质量分析
-备用模型：用于基础摘要和回答
-
-先 retry，再 fallback
-
-主链先重试几次
-如果仍然失败
-切换备用链
-```
+核心方法就是`with_retry_then_fallback`，主链先 retry 3 次，如果失败了，就使用备用链 retry 3 次。
 
 ###### 增加Streaming
 
@@ -1357,22 +1468,64 @@ fallback_chain
 
 最终结果生成时，不再等完整答案生成完，而是边生成边输出。
 
-适合流式输出的部分：
+
+
+```python
+def final_answer_input(workflow_output: dict) -> dict:
+    """Format routed workflow output for the final answer prompt."""
+    return {
+        "task": workflow_output["task"],
+        "result": json.dumps(
+            workflow_output["result"],
+            ensure_ascii=False,
+            indent=2,
+        ),
+    }
+
+final_answer_prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "你是一个中文文章处理助手，负责把工作流结果整理成清晰、自然、适合直接展示给用户的回答。",
+        ),
+        (
+            "human",
+            """请根据下面的工作流结果，生成最终回答。
+
+要求：
+1. 用中文回答。
+2. 不要提及内部 chain、Runnable、workflow 等实现细节。
+3. 如果 result 是列表，整理成简洁列表。
+4. 如果 result 是对象，按字段含义组织成易读内容。
+5. 如果 task 是 analysis，输出摘要、关键词、分类、情绪四部分。
+
+任务类型：
+{task}
+
+工作流结果：
+{result}
+""",
+        ),
+    ]
+)
+
+final_answer_chain = with_retry_then_fallback(
+    final_answer_prompt | primary_model | parser,
+    final_answer_prompt | backup_model | parser,
+)
+streaming_workflow_chain = final_chain | RunnableLambda(final_answer_input) | final_answer_chain
+def stream_article_workflow(article: str, instruction: str):
+    """Stream the final user-facing answer."""
+    return streaming_workflow_chain.stream(
+        {
+            "article": article,
+            "instruction": instruction,
+        }
+    )
 
 ```
-最终总结
-改写结果
-长文章分析报告
-风险分析说明
 
-用户输入
-  ↓
-完整 Workflow
-  ↓
-最终生成链 stream()
-  ↓
-chunk 1
-```
+就是在之前的基础上，在继续调用chian，将结果转换成流失输出，最终的执行流程如下：
 
 ```
 用户输入
@@ -1410,7 +1563,884 @@ stream() 流式输出
 
 
 
+### 三、Prompt API
+
+####  3.1 为什么需要 Prompt API 
+
+·`Prompt`实际上就是提示词，投喂给大模型的文本字符串，大模型根据输入的提示词来做输出，`Langchain`提供了大量的API来操作`prompt`，而不是单纯的将`prompt`当做字符串去操作，目的就是为了将提示词工程化，能够更好的适应一些复杂的场景：
+
+- 适配不同的大模型
+
+  不同厂商的大模型输入格式是不一样的， OpenAI：`[{"role":"system"},{"role":"user"}]` ； 阿里通义：`system:xxx\nuser:xxx` ，如果使用单纯的字符串就需要写大量的代码去适配
+
+- 复杂的工程能力手动写字符串无法实现
+
+  涉及到根据输入动态增减提示词片段、自动追加输出格式约束、多段提示词分层组合，这些场景手写字符串是无法实现的
+
+- Token管控，上下文窗口安全
+
+  大模型有最大输入长度限制的，裸字符串无法自动计算token，自动截断冗余内容
+
+- 标准化对接上下游组件
+
+  根据前面的最基础的chain学习，我们知道`Prompt`它实际上也是一个`Runnable`，它的输出是要喂给`model`的。
+
+所以`Langchain`提供了大量的API，让`prompt`有了工程化的能力，可以适配各种复杂场景。
+
+接下来详细的介绍下这些API
+
+
+
+####  3.2 PromptTemplate 
+
+ `PromptTemplate` 是 LangChain 中最基础的 Prompt 模板，适用一些普通文本模型或简单字符串 Prompt。
+
+```python
+from langchain_core.prompts import PromptTemplate
+
+prompt = PromptTemplate.from_template("请总结下面文章：{article}")
+```
+
+这里的prompt，是一个符合` Runnable `格式的模板对象，接受一个article参数，当它调用invoke时，需要传入这个参数：
+
+```python
+result = prompt.invoke({"article": "测试文本"})
+```
+
+此时result是一个 `PromptValue`  
+
+```python
+text = prompt.format(article="这里是一篇文章")
+```
+
+这个text就是一个标准的字符串了
+
+ 在 LangChain 工作流中，更推荐理解和使用 `invoke()`，因为它能自然接入stream、with_config和LCEL。 
+
+当涉及到一些简单的场景，`PromptTemplate` 可以把普通字符串 Prompt 变成可复用、可组合、可执行的模板组件
+
+####  3.3 ChatPromptTemplate 
+
+ `PromptTemplate`  适合一些简单的文本，`ChatPromptTemplate`就更加适合一些聊天场景。ChatModel他不只是接受一个字符串，更加适合接受一个消息结构的列表，包含SystemMessage、HumanMessage和AIMessage
+
+比如下面这个代码：
+
+```python
+from langchain_core.prompts import ChatPromptTemplate
+
+prompt = ChatPromptTemplate.from_messages([
+    ("system", "你是一个专业的中文写作助手。"),
+    ("human", "请总结下面文章：{article}")
+])
+```
+
+这个结构就更加适合真实的对话，有system定义角色、边界和规则；human代表用户的输入；ai代表模型的实例或者历史回复。
+
+`ChatPromptTemplate`和`PromptTemplate`最大的区别就是，前者将 Prompt 从“字符串模板”升级成了“消息结构模板”
+
+#### 3.4 MessagesPlaceholder 
+
+ `MessagesPlaceholder` 用来在 `ChatPromptTemplate` 中动态插入一组消息，常常用于多轮对话场景。
+
+普通的`ChatPromptTemplate`他的结构是固定的，比如前面章节的实例：
+
+```python
+prompt = ChatPromptTemplate.from_messages([
+    ("system", "你是一个智能助手。"),
+    ("human", "{question}")
+])
+```
+
+但真实聊天里，通常还有历史记录：
+
+```
+用户：什么是 Runnable？
+助手：Runnable 是 LangChain 的统一执行接口。
+用户：那它和普通函数有什么区别？
+```
+
+这些历史消息不是写死在 Prompt 里的，而是运行时传入。
+
+这时就需要 `MessagesPlaceholder`：
+
+```python
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+
+prompt = ChatPromptTemplate.from_messages([
+    ("system", "你是一个智能助手。"),
+    MessagesPlaceholder("history"),
+    ("human", "{question}")
+])
+```
+
+调用时：
+
+```python
+prompt.invoke({
+    "history": [
+        ("human", "什么是 Runnable？"),
+        ("ai", "Runnable 是 LangChain 的统一执行接口。"),
+    ],
+    "question": "那它和普通函数有什么区别？"
+})
+```
+
+最终消息结构会变成：
+
+```
+system：你是一个智能助手。
+human：什么是 Runnable？
+ai：Runnable 是 LangChain 的统一执行接口。
+human：那它和普通函数有什么区别？
+```
+
+如果历史消息为空，还可以这样设置，避免报错
+
+```python
+MessagesPlaceholder("history", optional=True)
+```
+
+同样也可以设置保留最近的几条历史记录
+
+```python
+MessagesPlaceholder("history", n_messages=4)
+```
+
+
+
+####  3.5 FewShot Prompt 
+
+ `FewShot Prompt` 指的是：在正式问题之前，先给模型几个示例，让模型模仿示例的格式、风格和推理方式。 也可以理解为，不知告诉模型要怎么做，而是直接给模型看正确答案。
+
+看下这个案例：
+
+```python
+from langchain_core.prompts import FewShotPromptTemplate, PromptTemplate
+
+examples = [
+    {
+        "article": "这篇文章介绍了大语言模型的发展。",
+        "category": "科技",
+    },
+    {
+        "article": "这篇文章讲述了鲁迅的文学创作。",
+        "category": "文学",
+    },
+]
+
+example_prompt = PromptTemplate.from_template(
+    "输入：{article}\n输出：{category}"
+)
+
+prompt = FewShotPromptTemplate(
+    examples=examples,
+    example_prompt=example_prompt,
+    prefix="请判断文章类别。参考下面示例：",
+    suffix="输入：{article}\n输出：",
+    input_variables=["article"],
+)
+prompt.invoke({
+    "article": "这篇文章分析了一家公司的商业模式。"
+})
+```
+
+最终输出的prompt是这样
+
+```
+请判断文章类别。参考下面示例：
+
+输入：这篇文章介绍了大语言模型的发展。
+输出：科技
+
+输入：这篇文章讲述了鲁迅的文学创作。
+输出：文学
+
+输入：这篇文章分析了一家公司的商业模式。
+输出：
+```
+
+这里使用 `FewShot Prompt`的好处主要在于约束输出格式、稳定模型的行为
+
+如果是文本`Prompt`可以使用前面的`FewShotPromptTemplate`，如果是对话类的， 更推荐使用 `FewShotChatMessagePromptTemplate` 
+
+```python
+from langchain_core.prompts import (
+    ChatPromptTemplate,
+    FewShotChatMessagePromptTemplate,
+)
+
+examples = [
+    {"input": "什么是 Runnable？", "output": "Runnable 是 LangChain 的统一执行接口。"},
+    {"input": "什么是 PromptTemplate？", "output": "PromptTemplate 是用于构造 Prompt 的模板。"},
+]
+
+example_prompt = ChatPromptTemplate.from_messages([
+    ("human", "{input}"),
+    ("ai", "{output}"),
+])
+
+few_shot_prompt = FewShotChatMessagePromptTemplate(
+    examples=examples,
+    example_prompt=example_prompt,
+)
+
+prompt = ChatPromptTemplate.from_messages([
+    ("system", "你是一个 LangChain 教学助手。"),
+    few_shot_prompt,
+    ("human", "{input}"),
+])
+```
+
+最终消息结构类似：
+
+```python
+system：你是一个 LangChain 教学助手。
+human：什么是 Runnable？
+ai：Runnable 是 LangChain 的统一执行接口。
+human：什么是 PromptTemplate？
+ai：PromptTemplate 是用于构造 Prompt 的模板。
+human：{input}
+```
+
+这种方式更适合 ChatModel，因为它保留了对话结构。
+
+
+
+#### 3.6 Example Selector 
+
+`FewShot Prompt` 是通过示例教模型做事，比单纯写规则可以得到大模型更加直观、稳定的输出。但是案例都会进入prompt，一起投喂给大模型，一旦案例过长，就会造成token额外的消耗，而且无关的案例还会干扰模型。
+
+`langchain`还提供了一个 `Example Selector` ，当面对大量的案例时，会根据输入，动态的选择几个最合适的案例来塞入`prompt`，具体流程是这样的
+
+```
+用户问题
+      │
+      ▼
+Example Selector
+      │
+挑选最相关 Example
+      │
+      ▼
+FewShotPromptTemplate
+      │
+拼接 Prompt
+      │
+      ▼
+LLM
+```
+
+常见的选择器主要有下面几种：
+
+- LengthBasedExampleSelector
+
+  这个是最简单的一个选择器，根据长度来控制prompt。比如设置prompt长度为4000token，他就会一直塞案例到prompt中，知道塞满为止。
+
+  看下这个案例
+
+  ```python
+  from langchain_core.example_selectors import LengthBasedExampleSelector
+  from langchain_core.prompts import PromptTemplate, FewShotPromptTemplate
+  
+  examples = [
+      {"input": "1+1", "output": "2"},
+      {"input": "2+3", "output": "5"},
+      {"input": "123 + 456", "output": "579"},
+      {"input": "请把“我喜欢学习 LangChain”翻译成英文", "output": "I like learning LangChain."},
+  ]
+  
+  example_prompt = PromptTemplate(
+      input_variables=["input", "output"],
+      template="输入: {input}\n输出: {output}"
+  )
+  
+  selector = LengthBasedExampleSelector(
+      examples=examples,
+      example_prompt=example_prompt,
+      max_length=30
+  )
+  
+  print(selector.select_examples({"input": "3+4"}))
+  ```
+
+  这个案例库比较小，他只会选择一些比较短的案例，因为这样比较节省token，如果案例库够长，他只会塞入比较短的30个案例
+
+- SemanticSimilarityExampleSelector
+
+  这是企业项目最常见选择器，实际上就是和RAG的流程一模一样，先转换成向量，然后在做语义相似度匹配，找到和用户输入最相似的案例。
+
+  看下这个案例
+
+  ```python
+  from langchain_core.example_selectors import SemanticSimilarityExampleSelector
+  from langchain_core.prompts import PromptTemplate, FewShotPromptTemplate
+  from langchain_openai import OpenAIEmbeddings
+  from langchain_community.vectorstores import FAISS
+  
+  examples = [
+      {"question": "怎么重置密码？", "answer": "点击登录页的忘记密码。"},
+      {"question": "怎么修改头像？", "answer": "进入个人中心，点击头像上传新图片。"},
+      {"question": "怎么删除账号？", "answer": "进入设置页面，找到账号注销入口。"},
+      {"question": "怎么绑定手机号？", "answer": "进入安全设置，选择绑定手机号。"},
+  ]
+  
+  example_prompt = PromptTemplate(
+      input_variables=["question", "answer"],
+      template="问题: {question}\n回答: {answer}"
+  )
+  
+  selector = SemanticSimilarityExampleSelector.from_examples(
+      examples=examples,
+      embeddings=OpenAIEmbeddings(),
+      vectorstore_cls=FAISS,
+      k=2
+  )
+  
+  selected = selector.select_examples({"question": "如何更换我的头像？"})
+  print(selected)
+  ```
+
+  这里就会根据用户的输入，去案例库中匹配语义最相似的案例去投喂给大模型
+
+- MaxMarginalRelevanceExampleSelector
+
+  这个是兼容多样性和相关性的，尽量在案例库中挑选一些相关又不重复的案例。
+
+  ```python
+  from langchain_core.example_selectors import MaxMarginalRelevanceExampleSelector
+  from langchain_core.prompts import PromptTemplate
+  from langchain_openai import OpenAIEmbeddings
+  from langchain_community.vectorstores import FAISS
+  
+  examples = [
+      {"topic": "头像", "question": "怎么修改头像？", "answer": "进入个人中心更换头像。"},
+      {"topic": "头像", "question": "怎么上传新头像？", "answer": "点击头像区域并选择图片。"},
+      {"topic": "昵称", "question": "怎么修改昵称？", "answer": "进入资料编辑页修改昵称。"},
+      {"topic": "手机号", "question": "怎么绑定手机号？", "answer": "进入安全设置绑定手机号。"},
+      {"topic": "密码", "question": "怎么重置密码？", "answer": "点击忘记密码进行重置。"},
+  ]
+  
+  example_prompt = PromptTemplate(
+      input_variables=["topic", "question", "answer"],
+      template="主题: {topic}\n问题: {question}\n回答: {answer}"
+  )
+  
+  selector = MaxMarginalRelevanceExampleSelector.from_examples(
+      examples=examples,
+      embeddings=OpenAIEmbeddings(),
+      vectorstore_cls=FAISS,
+      k=2,
+      fetch_k=5
+  )
+  
+  selected = selector.select_examples({"question": "我想修改个人资料里的头像和昵称"})
+  print(selected)
+  ```
+
+  
+
+
+
+#### 3.7 Partial Prompt 
+
+ `Partial Prompt` 指的是：提前固定 Prompt 中的一部分变量。 比如在传递prompt时，如果在prompt中有很多变量，就可以通过 partial 来固定某一些变量，后续传参中就可以不传那些被固定的变量了，有点类似于函数式编程中的函数柯里化，起到一个节约传参的目的。
+
+```python
+base_prompt = PromptTemplate.from_template("你是{role}，针对{topic}回答：{question}")
+
+# 第一步绑定role，生成半成品1
+step1 = base_prompt.partial(role="资深后端工程师")
+# 第二步再绑定topic，生成半成品2，只剩question需要传入
+step2 = step1.partial(topic="Python异步")
+
+# 最终只传question
+print(step2.format(question="asyncio原理"))
+```
+
+
+
+#### 3.8 Pipeline Prompt 
+
+一个复杂的prompt会由好几个部分组成，比如角色说明、任务说明、输出格式等，如果全部写在一个大的字符串中，会很难维护，`langchian`推出了 Pipeline Prompt 这个api，可以将多个prompt片段组合成一个prompt。
+
+```python
+from langchain_core.prompts import PromptTemplate
+
+role_prompt = PromptTemplate.from_template(
+    "你是一个专业的{domain}助手。"
+)
+
+task_prompt = PromptTemplate.from_template(
+    "你的任务是：{task}"
+)
+
+format_prompt = PromptTemplate.from_template(
+    "输出格式：{format_instruction}"
+)
+
+final_prompt = PromptTemplate.from_template("""
+{role}
+
+{task}
+
+{format_instruction}
+
+用户输入：
+{input}
+""")
+
+data = {
+    "domain": "文章分析",
+    "task": "总结文章并提取关键词",
+    "format_instruction": "请输出 JSON",
+    "input": "这里是文章内容..."
+}
+
+prompt_input = {
+    "role": role_prompt.invoke(data).to_string(),
+    "task": task_prompt.invoke(data).to_string(),
+    "format_instruction": format_prompt.invoke(data).to_string(),
+    "input": data["input"],
+}
+
+result = final_prompt.invoke(prompt_input)
+```
+
+
+
+#### 3.9 Prompt 最佳实践
+
+一个优秀的prompt，需要让模型清楚的知道他的角色、目标、参考对象、需要遵守的规则，还有就是输入和输出的格式，而不是一大坨自然语言。
+
+可以根据下面的规范来编写prompt
+
+###### 结构化
+
+推荐结构：
+
+```
+角色
+任务
+上下文
+约束
+输出格式
+示例
+用户输入
+```
+
+比如文章摘要的prompt可以这么写：
+
+```
+summary_prompt = ChatPromptTemplate.from_messages([
+    (
+        "system",
+        "你是一个专业的中文内容编辑，擅长把长文章总结成清晰、准确、易读的摘要。"
+    ),
+    (
+        "human",
+        """
+任务：
+请阅读下面文章，并生成摘要。
+
+要求：
+1. 用中文回答。
+2. 提取 3-5 条核心要点。
+3. 最后给出一句话总结。
+4. 只基于文章内容，不要编造信息。
+
+输出格式：
+核心要点：
+- ...
+- ...
+
+一句话总结：
+...
+
+文章：
+{article}
+"""
+    )
+])
+```
+
+不推荐：
+
+```
+你是一个助手，请帮我分析这篇文章，要求准确、专业、简洁，还要输出关键词……
+```
+
+推荐拆成：
+
+```
+角色：
+你是一个专业的文章分析助手。
+
+任务：
+请分析用户提供的文章。
+
+要求：
+1. 只基于文章内容回答。
+2. 不要编造信息。
+3. 用中文输出。
+
+输出格式：
+{
+  "summary": "...",
+  "keywords": ["...", "..."],
+  "category": "...",
+  "sentiment": "..."
+}
+
+输入：
+{article}
+```
+
+###### 明确输出格式
+
+```
+只返回 JSON
+只返回列表
+只返回一个类别
+不要添加解释
+不要返回 Markdown
+```
+
+比如关键词提取的prompt
+
+```
+keywords_prompt = ChatPromptTemplate.from_messages([
+    ("system", "你是一个中文关键词提取助手。"),
+    (
+        "human",
+        """
+请从文章中提取 5-8 个关键词。
+
+要求：
+1. 只返回 JSON 数组。
+2. 不要返回 Markdown。
+3. 不要添加解释。
+
+示例：
+["关键词1", "关键词2", "关键词3"]
+
+文章：
+{article}
+"""
+    )
+])
+```
+
+###### 控制变量边界
+
+不推荐这种prompt
+
+```
+请总结这篇文章：{article}
+```
+
+ 如果文章很长，或者文章里本身包含指令，模型可能混淆“系统任务”和“文章内容”。 
+
+可以这么做
+
+```
+请总结下面文章。
+
+文章开始：
+{article}
+文章结束。
+```
+
+###### 避免过度 Prompt
+
+prompt并不是越长越好，比如下面这样：
+
+```
+你必须非常准确、非常专业、非常认真、非常仔细、非常有逻辑……
+```
+
+并不一定会带来稳定的提升，反而会增加token的消耗
+
+更好的写法是明确约束条件：
+
+```
+只基于文章内容回答
+如果文章没有提到，回答“文章未提及”
+输出 3 条以内
+只返回 JSON
+
+少写情绪化形容词
+多写可执行约束
+```
+
+
+
+#### 3.10 Prompt 组合
+
+ Prompt 组合指的是：把多个 Prompt 片段或 Prompt 组件组合成更复杂的 Prompt 或工作流。 
+
+常见的组合方式有下面几种：
+
+###### 字符串片段组合
+
+这是最简单的组合方式
+
+```python
+role = "你是一个专业的中文文章分析助手。"
+
+task = """
+任务：
+请分析下面文章。
+"""
+
+format_instruction = """
+输出格式：
+{
+  "summary": "...",
+  "keywords": ["...", "..."]
+}
+"""
+
+template = f"""
+{role}
+
+{task}
+
+{format_instruction}
+
+文章：
+{{article}}
+"""
+
+prompt = ChatPromptTemplate.from_messages([
+    ("human", template)
+])
+```
+
+ 这种方式简单直接，但如果片段越来越多，就容易失控。 
+
+######  消息结构组合 
+
+```
+prompt = ChatPromptTemplate.from_messages([
+    ("system", "你是一个专业的中文文章分析助手。"),
+    ("human", "任务：请总结下面文章。"),
+    ("human", "要求：只基于文章内容，不要编造信息。"),
+    ("human", "文章：{article}")
+])
+```
+
+这种结构更加推荐
+
+###### 
+
+#### 3.11 实战：构建 Prompt Library
+
+在第二章中，我们写了一个workflow，里面的prompt都写在业务代码中，后续如果业务代码再复杂，就会导致文件越来越长，这里根据前面学习的，把 Prompt 从业务流程里抽出来，形成 Prompt Library。
+
+###### 第一步：设计目录结构
+
+新建目录结构：
+
+```
+langchain/
+    prompt_library/
+      __init__.py
+      article_prompts.py
+      router_prompts.py
+      output_prompts.py
+      debug.py
+```
+
+具体职责划分：
+
+```
+article_prompts.py：文章处理 Prompt
+router_prompts.py：任务识别 Prompt
+output_prompts.py：最终回答 Prompt
+debug.py：Prompt 调试工具
+```
+
+
+
+###### 第二步：抽取文章处理 Prompt
+
+文件：article_prompts.py 
+
+里面放文章处理相关 Prompt：
+
+```
+SUMMARY_PROMPT_VERSION = "summary_v1"
+KEYWORDS_PROMPT_VERSION = "keywords_v1"
+CATEGORY_PROMPT_VERSION = "category_v1"
+SENTIMENT_PROMPT_VERSION = "sentiment_v1"
+
+summary_prompt = ChatPromptTemplate.from_messages([...])
+keywords_prompt = ChatPromptTemplate.from_messages([...])
+category_prompt = ChatPromptTemplate.from_messages([...])
+sentiment_prompt = ChatPromptTemplate.from_messages([...])
+```
+
+这样 `summary_prompt`、`keywords_prompt` 不再散落在 workflow 文件里。
+
+###### 第三步：抽取任务路由 Prompt
+
+文件：router_prompts.py 
+
+```
+TASK_IDENTIFY_PROMPT_VERSION = "task_identify_v1"
+
+task_identify_prompt = ChatPromptTemplate.from_messages([...])
+```
+
+这个 Prompt 只负责一件事：
+
+```
+根据用户指令判断任务类型
+```
+
+比如：
+
+```
+请总结这篇文章 -> summarize
+请提取关键词 -> keywords
+请判断类别 -> category
+```
+
+###### 第四步：抽取最终回答 Prompt
+
+文件：output_prompts.py
+
+```
+FINAL_ANSWER_PROMPT_VERSION = "final_answer_v1"
+
+final_answer_prompt = ChatPromptTemplate.from_messages([...])
+```
+
+它负责把 workflow 的结构化结果整理成最终用户可读回答。
+
+###### 第五步：在 workflow 中复用 Prompt
+
+现在 `summary_chain.py` 里不再定义 Prompt，而是导入：
+
+```
+from prompt_library import (
+    category_prompt,
+    final_answer_prompt,
+    keywords_prompt,
+    sentiment_prompt,
+    summary_prompt,
+    task_identify_prompt,
+)
+```
+
+原来的 chain 逻辑基本不变：
+
+```
+summary_chain = with_retry_then_fallback(
+    summary_prompt | primary_model | parser,
+    summary_prompt | backup_model | parser,
+)
+```
+
+这说明一次好的重构不一定要改业务流程。
+
+这次只是把 Prompt 管理方式变清晰了
+
+###### 第六步：增加 Prompt Version
+
+Prompt Library 里统一维护版本：
+
+```
+SUMMARY_PROMPT_VERSION = "summary_v1"
+KEYWORDS_PROMPT_VERSION = "keywords_v1"
+TASK_IDENTIFY_PROMPT_VERSION = "task_identify_v1"
+```
+
+并在 `__init__.py` 里汇总：
+
+```
+PROMPT_VERSIONS = {
+    "summary": SUMMARY_PROMPT_VERSION,
+    "keywords": KEYWORDS_PROMPT_VERSION,
+    "category": CATEGORY_PROMPT_VERSION,
+    "sentiment": SENTIMENT_PROMPT_VERSION,
+    "task_identify": TASK_IDENTIFY_PROMPT_VERSION,
+    "final_answer": FINAL_ANSWER_PROMPT_VERSION,
+}
+```
+
+在 chain 中也可以写入 metadata：
+
+```
+summary_chain = summary_chain.with_config(
+    metadata={"prompt_version": SUMMARY_PROMPT_VERSION}
+)
+```
+
+这样后续调试、追踪、评测时，可以知道本次调用用了哪个 Prompt 版本。
+
+###### 第七步：增加 Debug 方法
+
+文件：[debug.py (line 1)](H:/project/blog/blog/ai应用开发/code/agent/langchain/prompt_library/debug.py:1)
+
+```
+def preview_prompt(prompt, input_data: dict) -> None:
+    prompt_value = prompt.invoke(input_data)
+
+    print("=== Prompt String ===")
+    print(prompt_value.to_string())
+
+    print("\n=== Prompt Messages ===")
+    for message in prompt_value.to_messages():
+        print(f"[{message.type}] {message.content}")
+```
+
+使用方式：
+
+```
+preview_prompt(task_identify_prompt, {
+    "article": demo_article[:500],
+    "instruction": demo_instruction,
+})
+```
+
+调试 Prompt 时，不要只看模型输出。
+
+更重要的是先看：
+
+```
+真正发给模型的 Prompt 长什么样
+变量有没有填进去
+消息结构是否正确
+```
+
+然后运行` python summary_chain.py `
+
+```
+#输出
+Prompt versions: {'summary': 'summary_v1', 'keywords': 'keywords_v1', 'category': 'category_v1', 'sentiment': 'sentiment_v1', 'task_identify': 'task_identify_v1', 'final_answer': 'final_answer_v1'}
+=== Prompt String ===
+System: 你是一个任务路由助手，根据用户指令选择最合适的文章处理链。
+Human: 请根据用户指令判断任务类型。
+
+只能返回下面 5 个值之一：
+summarize
+keywords
+category
+sentiment
+analysis
+```
+
+最终我们将prompt从散落在业务代码里的代码块抽离出来，变成了可以统一维护、单独测试、版本化迭代的工程化资产，为后续的agent健壮的工程能力打下了一个坚实的基础。
+
+
+
 ### 三、Model I/O：输入与输出体系
+
+
+
+
+
+
 
 #### 1 Chat Model
 
