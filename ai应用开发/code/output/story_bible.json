@@ -1,0 +1,45 @@
+{
+  "worldview": null,
+  "characters": [
+    {
+      "name": "林晚",
+      "aliases": [],
+      "identity": "穿着白大褂的人",
+      "goal": null,
+      "traits": [],
+      "source_claim_ids": [
+        "claim-001",
+        "claim-002"
+      ]
+    }
+  ],
+  "relationships": [],
+  "events": [
+    {
+      "sequence": 1,
+      "description": "林晚走进病房",
+      "participants": [
+        "林晚"
+      ],
+      "cause": null,
+      "result": null,
+      "source_claim_ids": [
+        "claim-001"
+      ]
+    },
+    {
+      "sequence": 3,
+      "description": "警察没有立即相信林晚",
+      "participants": [
+        "警察",
+        "林晚"
+      ],
+      "cause": null,
+      "result": null,
+      "source_claim_ids": [
+        "claim-004"
+      ]
+    }
+  ],
+  "unresolved_conflicts": []
+}

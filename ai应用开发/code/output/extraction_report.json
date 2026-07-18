@@ -1,0 +1,233 @@
+{
+  "story_bible": {
+    "worldview": null,
+    "characters": [
+      {
+        "name": "林晚",
+        "aliases": [],
+        "identity": "穿着白大褂的人",
+        "goal": null,
+        "traits": [],
+        "source_claim_ids": [
+          "claim-001",
+          "claim-002"
+        ]
+      }
+    ],
+    "relationships": [],
+    "events": [
+      {
+        "sequence": 1,
+        "description": "林晚走进病房",
+        "participants": [
+          "林晚"
+        ],
+        "cause": null,
+        "result": null,
+        "source_claim_ids": [
+          "claim-001"
+        ]
+      },
+      {
+        "sequence": 3,
+        "description": "警察没有立即相信林晚",
+        "participants": [
+          "警察",
+          "林晚"
+        ],
+        "cause": null,
+        "result": null,
+        "source_claim_ids": [
+          "claim-004"
+        ]
+      }
+    ],
+    "unresolved_conflicts": []
+  },
+  "candidate_bible": {
+    "worldview": null,
+    "characters": [
+      {
+        "name": "林晚",
+        "aliases": [],
+        "identity": "穿着白大褂的人",
+        "goal": null,
+        "traits": [],
+        "source_claim_ids": [
+          "claim-001",
+          "claim-002"
+        ]
+      },
+      {
+        "name": "警察",
+        "aliases": [],
+        "identity": null,
+        "goal": null,
+        "traits": [],
+        "source_claim_ids": [
+          "claim-003",
+          "claim-004"
+        ]
+      },
+      {
+        "name": "陈默",
+        "aliases": [],
+        "identity": null,
+        "goal": null,
+        "traits": [],
+        "source_claim_ids": [
+          "claim-003"
+        ]
+      }
+    ],
+    "relationships": [
+      {
+        "source": "林晚",
+        "target": "警察",
+        "relation_type": "对话",
+        "description": "林晚对警察说话",
+        "source_claim_ids": [
+          "claim-003"
+        ]
+      },
+      {
+        "source": "林晚",
+        "target": "陈默",
+        "relation_type": "指控",
+        "description": "林晚说陈默是凶手",
+        "source_claim_ids": [
+          "claim-003"
+        ]
+      }
+    ],
+    "events": [
+      {
+        "sequence": 1,
+        "description": "林晚走进病房",
+        "participants": [
+          "林晚"
+        ],
+        "cause": null,
+        "result": null,
+        "source_claim_ids": [
+          "claim-001"
+        ]
+      },
+      {
+        "sequence": 2,
+        "description": "林晚对警察说陈默是凶手",
+        "participants": [
+          "林晚",
+          "警察"
+        ],
+        "cause": null,
+        "result": null,
+        "source_claim_ids": [
+          "claim-003"
+        ]
+      },
+      {
+        "sequence": 3,
+        "description": "警察没有立即相信林晚",
+        "participants": [
+          "警察",
+          "林晚"
+        ],
+        "cause": null,
+        "result": null,
+        "source_claim_ids": [
+          "claim-004"
+        ]
+      }
+    ],
+    "unresolved_conflicts": []
+  },
+  "claims": [
+    {
+      "id": "claim-001",
+      "subject": "林晚",
+      "predicate": "走进",
+      "value": "病房",
+      "kind": "narrative_fact",
+      "evidence": [
+        {
+          "quote": "林晚走进病房。",
+          "start": 0,
+          "end": 7
+        }
+      ],
+      "speaker": null,
+      "confidence": 1.0,
+      "review_status": "auto_accepted",
+      "validation_errors": [],
+      "conflicts_with": []
+    },
+    {
+      "id": "claim-002",
+      "subject": "林晚",
+      "predicate": "穿着",
+      "value": "白大褂",
+      "kind": "narrative_fact",
+      "evidence": [
+        {
+          "quote": "她穿着白大褂。",
+          "start": 7,
+          "end": 14
+        }
+      ],
+      "speaker": null,
+      "confidence": 1.0,
+      "review_status": "auto_accepted",
+      "validation_errors": [],
+      "conflicts_with": []
+    },
+    {
+      "id": "claim-003",
+      "subject": "林晚",
+      "predicate": "对警察说",
+      "value": "陈默就是凶手",
+      "kind": "character_statement",
+      "evidence": [
+        {
+          "quote": "林晚对警察说：“陈默就是凶手。”",
+          "start": 16,
+          "end": 32
+        }
+      ],
+      "speaker": "林晚",
+      "confidence": 1.0,
+      "review_status": "needs_review",
+      "validation_errors": [],
+      "conflicts_with": []
+    },
+    {
+      "id": "claim-004",
+      "subject": "警察",
+      "predicate": "没有立即相信",
+      "value": "她",
+      "kind": "narrative_fact",
+      "evidence": [
+        {
+          "quote": "警察没有立即相信她。",
+          "start": 34,
+          "end": 44
+        }
+      ],
+      "speaker": null,
+      "confidence": 1.0,
+      "review_status": "auto_accepted",
+      "validation_errors": [],
+      "conflicts_with": []
+    }
+  ],
+  "conflicts": [],
+  "source_sha256": "a406578490c73e4f6f85546334be25cc98cad08e0cdda544fa36027ab95aab73",
+  "prompt_version": "story-extractor-v1",
+  "publication_warnings": [
+    "character not published because its source claims are missing or unaccepted: ['claim-003', 'claim-004']",
+    "character not published because its source claims are missing or unaccepted: ['claim-003']",
+    "relationship not published because its source claims are missing or unaccepted: ['claim-003']",
+    "relationship not published because its source claims are missing or unaccepted: ['claim-003']",
+    "event not published because its source claims are missing or unaccepted: ['claim-003']"
+  ]
+}

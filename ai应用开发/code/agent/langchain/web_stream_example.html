@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LangServe Stream Demo</title>
+</head>
+<body>
+  <textarea id="message" rows="4" cols="60">介绍一下 LangServe</textarea>
+  <button id="send">流式发送</button>
+  <button id="stop" disabled>停止</button>
+  <pre id="output"></pre>
+
+  <script>
+    const message = document.querySelector("#message");
+    const output = document.querySelector("#output");
+    const sendButton = document.querySelector("#send");
+    const stopButton = document.querySelector("#stop");
+    let controller;
+
+    function handleSseFrame(frame) {
+      const lines = frame.split("\n");
+      const event = lines.find((line) => line.startsWith("event:"))
+        ?.slice(6).trim();
+      const data = lines
+        .filter((line) => line.startsWith("data:"))
+        .map((line) => line.slice(5).trimStart())
+        .join("\n");
+
+      if (event === "data" && data) {
+        output.textContent += JSON.parse(data);
+      }
+    }
+
+    sendButton.addEventListener("click", async () => {
+      output.textContent = "";
+      controller = new AbortController();
+      sendButton.disabled = true;
+      stopButton.disabled = false;
+
+      try {
+        const response = await fetch("http://127.0.0.1:8000/chat/stream", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ input: { message: message.value } }),
+          signal: controller.signal
+        });
+
+        if (!response.ok || !response.body) {
+          throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+        }
+
+        const reader = response.body
+          .pipeThrough(new TextDecoderStream())
+          .getReader();
+        let buffer = "";
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          buffer += value.replaceAll("\r\n", "\n");
+          const frames = buffer.split("\n\n");
+          buffer = frames.pop() ?? "";
+          frames.forEach(handleSseFrame);
+        }
+
+        if (buffer.trim()) handleSseFrame(buffer);
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          output.textContent += `\n请求失败：${error.message}`;
+        }
+      } finally {
+        sendButton.disabled = false;
+        stopButton.disabled = true;
+      }
+    });
+
+    stopButton.addEventListener("click", () => controller?.abort());
+  </script>
+</body>
+</html>
